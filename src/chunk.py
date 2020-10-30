@@ -1,11 +1,11 @@
-from enum import Enum
+import enum
 from typing import List, Optional, Tuple, Union
 
 import memory
 import value
 
 
-class OpCode(Enum):
+class OpCode(enum.Enum):
     """Each instruction has a 1-byte operation code, which controls what kind of
     instruction we're dealing with."""
     OP_CONSTANT = "OP_CONSTANT"
