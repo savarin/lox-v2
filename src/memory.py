@@ -1,7 +1,4 @@
-from typing import List, Optional, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from src import chunk
+from typing import Any, List, Optional
 
 
 def grow_capacity(capacity):
@@ -14,19 +11,19 @@ def grow_capacity(capacity):
 
 
 def grow_array(array, old_count, new_count):
-    # type: (chunk.Code, int, int) -> chunk.Code
+    # type: (Optional[List[Any]], int, int) -> Optional[List[Any]]
     """Wrapper around reallocate call to grow size of array."""
     return reallocate(array, old_count, new_count)
 
 
 def free_array(array, old_count):
-    # type: (chunk.Code, int) -> chunk.Code
+    # type: (Optional[List[Any]], int) -> Optional[List[Any]]
     """Frees memory."""
     return reallocate(array, old_count, 0)
 
 
 def reallocate(array, old_size, new_size):
-    # type: (chunk.Code, int, int) -> chunk.Code
+    # type: (Optional[List[Any]], int, int) -> Optional[List[Any]]
     """Handles all dynamic memory management, including allocating memory,
     freeing it and changing the size of an existing allocation."""
     if new_size == 0:

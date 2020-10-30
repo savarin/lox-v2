@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING
-
 from src import chunk
 
 
@@ -14,8 +12,7 @@ def disassemble_chunk(bytecode, name):
 
 def simple_instruction(name, offset):
     # type: (str, int) -> int
-    """
-    """
+    """Utility function for simple instructions."""
     print("{}".format(name))
     return offset + 1
 

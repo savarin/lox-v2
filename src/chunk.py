@@ -28,18 +28,6 @@ def init_chunk():
     return Chunk()
 
 
-def free_chunk(bytecode):
-    # type: (Chunk) -> Chunk
-    """Deallocates memory and calls init_chunk to leave chunk in a well-defined
-    empty state."""
-    assert bytecode.code is not None
-    bytecode.code = memory.free_array(bytecode.code, bytecode.capacity)
-    bytecode.count = 0
-    bytecode.capacity = 0
-
-    return init_chunk()
-
-
 def write_chunk(bytecode, byte):
     # type: (Chunk, OpCode) -> Chunk
     """Append byte to the end of the chunk."""
@@ -54,3 +42,15 @@ def write_chunk(bytecode, byte):
     bytecode.count += 1
 
     return bytecode
+
+
+def free_chunk(bytecode):
+    # type: (Chunk) -> Chunk
+    """Deallocates memory and calls init_chunk to leave chunk in a well-defined
+    empty state."""
+    assert bytecode.code is not None
+    bytecode.code = memory.free_array(bytecode.code, bytecode.capacity)
+    bytecode.count = 0
+    bytecode.capacity = 0
+
+    return init_chunk()
