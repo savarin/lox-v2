@@ -14,19 +14,19 @@ def grow_capacity(capacity):
 
 
 def grow_array(array, old_count, new_count):
-    # type: (chunk.Bytecode, int, int) -> chunk.Bytecode
+    # type: (chunk.Code, int, int) -> chunk.Code
     """Wrapper around reallocate call to grow size of array."""
     return reallocate(array, old_count, new_count)
 
 
 def free_array(array, old_count):
-    # type: (chunk.Bytecode, int) -> chunk.Bytecode
+    # type: (chunk.Code, int) -> chunk.Code
     """Frees memory."""
     return reallocate(array, old_count, 0)
 
 
 def reallocate(array, old_size, new_size):
-    # type: (chunk.Bytecode, int, int) -> chunk.Bytecode
+    # type: (chunk.Code, int, int) -> chunk.Code
     """Handles all dynamic memory management, including allocating memory,
     freeing it and changing the size of an existing allocation."""
     if new_size == 0:

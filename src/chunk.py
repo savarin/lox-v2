@@ -10,7 +10,7 @@ class OpCode(Enum):
     OP_RETURN = "OP_RETURN"
 
 
-Bytecode = Optional[List[Optional[OpCode]]]
+Code = Optional[List[Optional[OpCode]]]
 
 
 class Chunk():
@@ -19,7 +19,7 @@ class Chunk():
         """Stores data along with the instructions."""
         self.count = 0
         self.capacity = 0
-        self.code = None  # type: Bytecode
+        self.code = None  # type: Code
 
 
 def init_chunk():
