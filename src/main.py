@@ -15,10 +15,10 @@ def main2():
     bytecode = chunk.init_chunk()
 
     bytecode, constant = chunk.add_constant(bytecode, 1.2)
-    bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_CONSTANT)
-    bytecode = chunk.write_chunk(bytecode, constant)
+    bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_CONSTANT, 123)
+    bytecode = chunk.write_chunk(bytecode, constant, 123)
 
-    bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN)
+    bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN, 123)
     debug.disassemble_chunk(bytecode, "test chunk")
     bytecode = chunk.free_chunk(bytecode)
 

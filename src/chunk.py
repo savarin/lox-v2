@@ -13,6 +13,7 @@ class OpCode(Enum):
 
 
 Code = Optional[List[Optional[Union[OpCode, int]]]]
+Lines = Optional[List[Optional[int]]]
 
 
 class Chunk():
@@ -22,6 +23,7 @@ class Chunk():
         self.count = 0
         self.capacity = 0
         self.code = None  # type: Code
+        self.lines = None  # type: Lines
         self.constants = None  # type: Optional[value.ValueArray]
 
 
@@ -34,17 +36,20 @@ def init_chunk():
     return bytecode
 
 
-def write_chunk(bytecode, byte):
-    # type: (Chunk, OpCode) -> Chunk
+def write_chunk(bytecode, byte, line):
+    # type: (Chunk, OpCode, int) -> Chunk
     """Append byte to the end of the chunk."""
     # If current array not have capacity for new byte, grow array.
     if bytecode.capacity < bytecode.count + 1:
         old_capacity = bytecode.capacity
         bytecode.capacity = memory.grow_capacity(old_capacity)
         bytecode.code = memory.grow_array(bytecode.code, old_capacity, bytecode.capacity)
+        bytecode.lines = memory.grow_array(bytecode.lines, old_capacity, bytecode.capacity)
 
     assert bytecode.code is not None
+    assert bytecode.lines is not None
     bytecode.code[bytecode.count] = byte
+    bytecode.lines[bytecode.count] = line
     bytecode.count += 1
 
     return bytecode
@@ -63,7 +68,9 @@ def free_chunk(bytecode):
     """Deallocates memory and calls init_chunk to leave chunk in a well-defined
     empty state."""
     assert bytecode.code is not None
+    assert bytecode.lines is not None
     bytecode.code = memory.free_array(bytecode.code, bytecode.capacity)
+    bytecode.lines = memory.free_array(bytecode.lines, bytecode.capacity)
 
     assert bytecode.constants is not None
     if bytecode.constants.values is not None:

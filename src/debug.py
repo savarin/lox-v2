@@ -39,6 +39,15 @@ def disassemble_instruction(bytecode, offset):
     """Expose details pertaining to each specific instruction."""
     print("{:04d}".format(offset), end=" ")
 
+    assert bytecode.lines is not None
+    line = bytecode.lines[offset]
+
+    assert line is not None
+    if offset > 0 and line == bytecode.lines[offset - 1]:
+        print("   |", end=" ")
+    else:
+        print("{:04d}".format(line), end=" ")
+
     assert bytecode.code is not None
     instruction = bytecode.code[offset]
 
