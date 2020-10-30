@@ -1,8 +1,11 @@
 import chunk
 
+Name = str
+Offset = int
+
 
 def disassemble_chunk(bytecode, name):
-    # type: (chunk.Chunk, str) -> None
+    # type: (chunk.Chunk, Name) -> None
     """Expose each instruction in chunk."""
     print("== {} ==".format(name))
     offset = 0
@@ -12,7 +15,7 @@ def disassemble_chunk(bytecode, name):
 
 
 def constant_instruction(bytecode, name, offset):
-    # type: (chunk.Chunk, str, int) -> int
+    # type: (chunk.Chunk, Name, Offset) -> Offset
     """Utility function for constant instructions."""
     assert bytecode.code is not None
     constant = bytecode.code[offset + 1]
@@ -28,14 +31,14 @@ def constant_instruction(bytecode, name, offset):
 
 
 def simple_instruction(name, offset):
-    # type: (str, int) -> int
+    # type: (Name, Offset) -> Offset
     """Utility function for simple instructions."""
     print("{}".format(name))
     return offset + 1
 
 
 def disassemble_instruction(bytecode, offset):
-    # type: (chunk.Chunk, int) -> int
+    # type: (chunk.Chunk, Offset) -> Offset
     """Expose details pertaining to each specific instruction."""
     print("{:04d}".format(offset), end=" ")
 

@@ -1,7 +1,10 @@
 import enum
-from typing import Optional
+from typing import Optional, Tuple
 
 import chunk
+import value
+
+STACK_MAX = 256
 
 
 class InterpretResult(enum.Enum):
@@ -16,18 +19,48 @@ class VM():
         """Stores bytecode and current instruction pointer."""
         self.bytecode = None  # type: Optional[chunk.Chunk]
         self.ip = None  # type: Optional[int]
+        self.stack = None
+        self.stack_top = None
+
+
+def reset_stack(emulator):
+    #
+    """Reset VM by moving stack_top to point to beginning of array, thus
+    indicating stack is empty."""
+    emulator.stack = [None] * STACK_MAX
+    emulator.stack_top = 0
+    return emulator
 
 
 def init_vm():
     # type: () -> VM
     """Initialize new VM."""
-    return VM()
+    emulator = VM()
+    return reset_stack(emulator)
 
 
 def free_vm(emulator):
     # type: (VM) -> None
     """Deallocates memory in VM."""
     pass
+
+
+def push(emulator, val):
+    # type: (VM, value.Value) -> VM
+    """Push new value to the top of the stack."""
+    assert emulator.stack is not None
+    emulator.stack[emulator.stack_top] = val
+    emulator.stack_top += 1
+
+    return emulator
+
+
+def pop(emulator):
+    # type: (VM) -> Tuple[VM, value.Value]
+    """Pop most recently pushed value."""
+    assert emulator.stack_top is not None
+    emulator.stack_top -= 1
+    return emulator, emulator.stack[emulator.stack_top]
 
 
 def run(emulator):
@@ -40,7 +73,7 @@ def run(emulator):
         return emulator.bytecode.code[emulator.ip - 1]
 
     def read_constant():
-        # type: () -> int
+        # type: () -> value.Value
         """Reads next byte from bytecode, treats result as index and looks up
         corresponding location in constants table."""
         return emulator.bytecode.constants.values[read_byte()]
@@ -50,10 +83,11 @@ def run(emulator):
 
         if instruction == chunk.OpCode.OP_CONSTANT:
             constant = read_constant()
-            print(constant)
-            break
+            emulator = push(emulator, constant)
 
         elif instruction == chunk.OpCode.OP_RETURN:
+            emulator, constant = pop(emulator)
+            print(constant)
             return InterpretResult.INTERPRET_OK
 
 

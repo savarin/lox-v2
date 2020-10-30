@@ -12,8 +12,9 @@ class OpCode(enum.Enum):
     OP_RETURN = "OP_RETURN"
 
 
-Code = Optional[List[Optional[Union[OpCode, int]]]]
-Lines = Optional[List[Optional[int]]]
+Code = Optional[List[Optional[Union[OpCode, value.Value]]]]
+Line = int
+Lines = Optional[List[Optional[Line]]]
 
 
 class Chunk():
@@ -37,7 +38,7 @@ def init_chunk():
 
 
 def write_chunk(bytecode, byte, line):
-    # type: (Chunk, OpCode, int) -> Chunk
+    # type: (Chunk, OpCode, Line) -> Chunk
     """Append byte to the end of the chunk."""
     # If current array not have capacity for new byte, grow array.
     if bytecode.capacity < bytecode.count + 1:
@@ -56,7 +57,7 @@ def write_chunk(bytecode, byte, line):
 
 
 def add_constant(bytecode, val):
-    # type: (Chunk, int) -> Tuple[Chunk, int]
+    # type: (Chunk, value.Value) -> Tuple[Chunk, value.Value]
     """Append value to the end of the chunk's value array."""
     assert bytecode.constants is not None
     bytecode.constants = value.write_value_array(bytecode.constants, val)

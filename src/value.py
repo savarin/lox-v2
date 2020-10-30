@@ -1,8 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import memory
 
-Values = Optional[List[Optional[int]]]
+Value = Union[int, float]
+Values = Optional[List[Optional[Value]]]
 
 
 class ValueArray():
@@ -21,7 +22,7 @@ def init_value_array():
 
 
 def write_value_array(value_array, val):
-    # type: (ValueArray, int) -> ValueArray
+    # type: (ValueArray, Value) -> ValueArray
     """Append value to the end of the value array."""
     # If current array not have capacity for new value, grow array.
     if value_array.capacity < value_array.count + 1:
@@ -50,3 +51,9 @@ def free_value_array(value_array):
     value_array.capacity = 0
 
     return init_value_array()
+
+
+def print_value(val):
+    # type: (Value) -> None
+    """Print value based on value type."""
+    print(val)
