@@ -1,13 +1,30 @@
-from src import chunk
+import chunk
 
 
 def disassemble_chunk(bytecode, name):
     # type: (chunk.Chunk, str) -> None
     """Expose each instruction in chunk."""
     print("== {} ==".format(name))
+    offset = 0
 
-    for offset in range(bytecode.count):
-        offset = diassemble_instruction(bytecode, offset)
+    while offset < bytecode.count:
+        offset = disassemble_instruction(bytecode, offset)
+
+
+def constant_instruction(bytecode, name, offset):
+    # type: (chunk.Chunk, str, int) -> int
+    """Utility function for constant instructions."""
+    assert bytecode.code is not None
+    constant = bytecode.code[offset + 1]
+
+    assert bytecode.constants is not None
+    assert bytecode.constants.values is not None
+    assert isinstance(constant, int)
+    val = bytecode.constants.values[constant]
+
+    assert constant is not None
+    print("{:16s} {:4d} '{}'".format(name, constant, val))
+    return offset + 2
 
 
 def simple_instruction(name, offset):
@@ -17,7 +34,7 @@ def simple_instruction(name, offset):
     return offset + 1
 
 
-def diassemble_instruction(bytecode, offset):
+def disassemble_instruction(bytecode, offset):
     # type: (chunk.Chunk, int) -> int
     """Expose details pertaining to each specific instruction."""
     print("{:04d}".format(offset), end=" ")
@@ -25,7 +42,9 @@ def diassemble_instruction(bytecode, offset):
     assert bytecode.code is not None
     instruction = bytecode.code[offset]
 
-    if instruction == chunk.OpCode.OP_RETURN:
+    if instruction == chunk.OpCode.OP_CONSTANT:
+        return constant_instruction(bytecode, "OP_CONSTANT", offset)
+    elif instruction == chunk.OpCode.OP_RETURN:
         return simple_instruction("OP_RETURN", offset)
 
     print("Unknown opcode {}".format(instruction))

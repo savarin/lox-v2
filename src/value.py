@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from src import memory
+import memory
 
 Values = Optional[List[Optional[int]]]
 
