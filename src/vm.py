@@ -4,7 +4,9 @@ from typing import Optional, Tuple
 import chunk
 import value
 
-STACK_MAX = 256
+STACK_MAX = 16
+
+Operation = str
 
 
 class InterpretResult(enum.Enum):
@@ -40,9 +42,9 @@ def init_vm():
 
 
 def free_vm(emulator):
-    # type: (VM) -> None
+    # type: (VM) -> VM
     """Deallocates memory in VM."""
-    pass
+    return emulator
 
 
 def push(emulator, val):
@@ -63,36 +65,79 @@ def pop(emulator):
     return emulator, emulator.stack[emulator.stack_top]
 
 
-def run(emulator):
-    #
-    """Executes instructions in bytecode."""
-    def read_byte():
-        # type: () -> chunk.OpCode
-        """Reads byte at current instruction pointer and advances pointer."""
-        emulator.ip += 1
-        return emulator.bytecode.code[emulator.ip - 1]
+def read_byte(emulator):
+    # type: (VM) -> Tuple[VM, chunk.Byte]
+    """Reads byte at current instruction pointer and advances pointer."""
+    assert emulator.ip is not None
+    emulator.ip += 1
 
-    def read_constant():
-        # type: () -> value.Value
-        """Reads next byte from bytecode, treats result as index and looks up
-        corresponding location in constants table."""
-        return emulator.bytecode.constants.values[read_byte()]
+    assert emulator.bytecode is not None
+    assert emulator.bytecode.code is not None
+    instruction = emulator.bytecode.code[emulator.ip - 1]
 
+    assert instruction is not None
+    return emulator, instruction
+
+
+def read_constant(emulator):
+    # type: (VM) -> Tuple[VM, value.Value]
+    """Reads next byte from bytecode, treats result as index and looks up
+    corresponding location in constants table."""
+    emulator, offset = read_byte(emulator)
+
+    assert emulator.bytecode is not None
+    assert emulator.bytecode.constants is not None
+    assert emulator.bytecode.constants.values is not None
+    assert isinstance(offset, int)
+    constant = emulator.bytecode.constants.values[offset]
+
+    assert constant is not None
+    return emulator, constant
+
+
+def binary_op(emulator, op):
+    # type: (VM, Operation) -> VM
+    """Execute binary operation on two items at the top of the stack."""
     while True:
-        instruction = read_byte()
+        emulator, b = pop(emulator)
+        emulator, a = pop(emulator)
+        return push(emulator, eval("a {} b".format(op)))
+
+
+def run(emulator):
+    # type: (VM) -> Tuple[InterpretResult, value.Value]
+    """Executes instructions in bytecode."""
+    while True:
+        emulator, instruction = read_byte(emulator)
 
         if instruction == chunk.OpCode.OP_CONSTANT:
-            constant = read_constant()
+            emulator, constant = read_constant(emulator)
             emulator = push(emulator, constant)
+
+        elif instruction == chunk.OpCode.OP_ADD:
+            emulator = binary_op(emulator, "+")
+
+        elif instruction == chunk.OpCode.OP_SUBTRACT:
+            emulator = binary_op(emulator, "-")
+
+        elif instruction == chunk.OpCode.OP_MULTIPLY:
+            emulator = binary_op(emulator, "*")
+
+        elif instruction == chunk.OpCode.OP_DIVIDE:
+            emulator = binary_op(emulator, "/")
+
+        elif instruction == chunk.OpCode.OP_NEGATE:
+            emulator, constant = pop(emulator)
+            emulator = push(emulator, -constant)
 
         elif instruction == chunk.OpCode.OP_RETURN:
             emulator, constant = pop(emulator)
             print(constant)
-            return InterpretResult.INTERPRET_OK
+            return InterpretResult.INTERPRET_OK, constant
 
 
 def interpret(emulator, bytecode):
-    # type: (VM, chunk.Chunk) -> None
+    # type: (VM, chunk.Chunk) -> Tuple[InterpretResult, value.Value]
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
     emulator.bytecode = bytecode

@@ -1,11 +1,10 @@
 import chunk
-import debug
 import vm
 
 
-def main():
+def test_init_vm():
+    # type: () -> None
     emulator = vm.init_vm()
-
     bytecode = chunk.init_chunk()
 
     bytecode, constant = chunk.add_constant(bytecode, 1.2)
@@ -27,12 +26,9 @@ def main():
 
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN, 123)
 
-    debug.disassemble_chunk(bytecode, "test chunk")
-
     result, constant = vm.interpret(emulator, bytecode)
+    assert result == vm.InterpretResult.INTERPRET_OK
+    assert constant == -1.0
+
     emulator = vm.free_vm(emulator)
     bytecode = chunk.free_chunk(bytecode)
-
-
-if __name__ == "__main__":
-    main()

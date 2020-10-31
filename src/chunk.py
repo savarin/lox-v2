@@ -9,10 +9,16 @@ class OpCode(enum.Enum):
     """Each instruction has a 1-byte operation code, which controls what kind of
     instruction we're dealing with."""
     OP_CONSTANT = "OP_CONSTANT"
+    OP_ADD = "OP_ADD"
+    OP_SUBTRACT = "OP_SUBTRACT"
+    OP_MULTIPLY = "OP_MULTIPLY"
+    OP_DIVIDE = "OP_DIVIDE"
+    OP_NEGATE = "OP_NEGATE"
     OP_RETURN = "OP_RETURN"
 
 
-Code = Optional[List[Optional[Union[OpCode, value.Value]]]]
+Byte = Union[OpCode, value.Value]
+Code = Optional[List[Optional[Byte]]]
 Line = int
 Lines = Optional[List[Optional[Line]]]
 
@@ -38,7 +44,7 @@ def init_chunk():
 
 
 def write_chunk(bytecode, byte, line):
-    # type: (Chunk, OpCode, Line) -> Chunk
+    # type: (Chunk, Byte, Line) -> Chunk
     """Append byte to the end of the chunk."""
     # If current array not have capacity for new byte, grow array.
     if bytecode.capacity < bytecode.count + 1:
