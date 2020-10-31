@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 import chunk
 import compiler
+import scanner
 import value
 
 STACK_MAX = 16
@@ -144,13 +145,13 @@ def run(emulator):
 
 
 def interpret(emulator, source):
-    # type: (VM, chunk.Chunk) -> Tuple[InterpretResult, value.Value]
+    # type: (VM, scanner.Source) -> InterpretResult
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
     bytecode = chunk.init_chunk()
 
     if not compiler.compile(source):
-        bytecode.free_chunk()
+        bytecode = chunk.free_chunk(bytecode)
         return InterpretResult.INTERPRET_COMPILE_ERROR
 
     emulator.bytecode = bytecode
