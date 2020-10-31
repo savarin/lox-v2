@@ -14,17 +14,17 @@ def repl(emulator):
             break
 
         # TODO: Revisit once scanner complete
-        vm.interpret(emulator, line)  # type: ignore
+        vm.interpret(emulator, line, 0)
 
 
-def read_file(emulator, path):
-    # type: (vm.VM, str) -> None
+def read_file(emulator, path, debug_level=0):
+    # type: (vm.VM, str, int) -> None
     """Compile and run source code in file at path."""
     with open(path, "r") as f:
         source = f.read()
 
     # TODO: Revisit once scanner complete
-    result, _ = vm.interpret(emulator, source)  # type: ignore
+    result, _ = vm.interpret(emulator, source, debug_level)
 
     if result == vm.InterpretResult.INTERPRET_COMPILE_ERROR:
         exit_code(65)
@@ -49,8 +49,10 @@ def main():
         repl(emulator)
     elif size == 2:
         read_file(emulator, sys.argv[1])
+    elif size == 3:
+        read_file(emulator, sys.argv[1], int(sys.argv[2]))
     else:
-        print("Usage: clox [path]")
+        print("Usage: python src/main.py [path]")
         exit_code(64)
 
     emulator = vm.free_vm(emulator)

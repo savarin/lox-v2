@@ -7,11 +7,13 @@ Offset = int
 def disassemble_chunk(bytecode, name):
     # type: (chunk.Chunk, Name) -> None
     """Expose each instruction in chunk."""
-    print("== {} ==".format(name))
+    print("\n== {} ==".format(name))
     offset = 0
 
     while offset < bytecode.count:
         offset = disassemble_instruction(bytecode, offset)
+
+    print("")
 
 
 def constant_instruction(bytecode, name, offset):

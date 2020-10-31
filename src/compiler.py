@@ -3,18 +3,21 @@ import functools
 from typing import Dict, List, Optional, Tuple
 
 import chunk
+import debug
 import scanner
 import value
 
 UINT8_MAX = 256
 
 
-def debug(f):
+def expose(f):
     """Print the function signature and return value, implemented where function
     returns resolver state."""
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        print("  {}".format(f.__name__))
+        if args[0].debug_level >= 3:
+            print("  {}".format(f.__name__))
+
         value = f(*args, **kwargs)
         return value
 
@@ -86,19 +89,21 @@ class Parser():
         self.previous = None  # type: Optional[scanner.Token]
         self.had_error = False
         self.panic_mode = False
+        self.debug_level = 0
 
 
-def init_parser(reader, bytecode):
-    # type: (scanner.Scanner, chunk.Chunk) -> Parser
+def init_parser(reader, bytecode, debug_level):
+    # type: (scanner.Scanner, chunk.Chunk, int) -> Parser
     """Initialize new parser."""
     resolver = Parser()
     resolver.reader = reader
     resolver.bytecode = bytecode
+    resolver.debug_level = debug_level
 
     return resolver
 
 
-@debug
+@expose
 def error_at(resolver, token, message):
     # type: (Parser, scanner.Token, str) -> Parser
     """Expose error and details pertaining to error."""
@@ -125,7 +130,7 @@ def error_at(resolver, token, message):
     return resolver
 
 
-@debug
+@expose
 def error(resolver, message):
     # type: (Parser, str) -> Parser
     """Extract error location from token just consumed."""
@@ -133,7 +138,7 @@ def error(resolver, message):
     return error_at(resolver, resolver.previous, message)
 
 
-@debug
+@expose
 def error_at_current(resolver, message):
     # type: (Parser, str) -> Parser
     """Extract error location from current token."""
@@ -141,7 +146,7 @@ def error_at_current(resolver, message):
     return error_at(resolver, resolver.current, message)
 
 
-@debug
+@expose
 def advance(resolver):
     # type: (Parser) -> Parser
     """Steps through token stream and stores for later use."""
@@ -153,7 +158,7 @@ def advance(resolver):
         current_token = scanner.scan_token(resolver.reader)
         resolver.current = current_token
 
-        if current_token.token_type:
+        if resolver.debug_level >= 2 and current_token.token_type:
             print(current_token.token_type)
 
         if current_token.token_type != scanner.TokenType.TOKEN_ERROR:
@@ -165,7 +170,7 @@ def advance(resolver):
     return resolver
 
 
-@debug
+@expose
 def consume(resolver, token_type, message):
     # type: (Parser, scanner.TokenType, str) -> Parser
     """Reads the next token and validates token has expected type."""
@@ -183,7 +188,7 @@ def check(resolver, token_type):
     return resolver.current.token_type == token_type
 
 
-@debug
+@expose
 def match(resolver, token_type):
     # type: (Parser, scanner.TokenType) -> Tuple[Parser, bool]
     """If current token has given type, consume token and return True."""
@@ -193,7 +198,7 @@ def match(resolver, token_type):
     return advance(resolver), True
 
 
-@debug
+@expose
 def emit_byte(resolver, byte):
     # type: (Parser, chunk.Byte) -> Parser
     """Append single byte to bytecode."""
@@ -204,7 +209,7 @@ def emit_byte(resolver, byte):
     return resolver
 
 
-@debug
+@expose
 def emit_bytes(resolver, byte1, byte2):
     # type: (Parser, chunk.Byte, chunk.Byte) -> Parser
     """Append two bytes to bytecode."""
@@ -212,14 +217,14 @@ def emit_bytes(resolver, byte1, byte2):
     return emit_byte(resolver, byte2)
 
 
-@debug
+@expose
 def emit_return(resolver):
     # type: (Parser) -> Parser
     """Clean up after complete compilation stage."""
     return emit_byte(resolver, chunk.OpCode.OP_RETURN)
 
 
-@debug
+@expose
 def make_constant(resolver, val):
     # type: (Parser, value.Value) -> Tuple[Parser, Optional[value.Value]]
     """Add value to constant table."""
@@ -232,7 +237,7 @@ def make_constant(resolver, val):
     return resolver, constant
 
 
-@debug
+@expose
 def emit_constant(resolver, val):
     # type: (Parser, value.Value) -> Parser
     """Append constant to bytecode."""
@@ -242,14 +247,14 @@ def emit_constant(resolver, val):
     return emit_bytes(resolver, chunk.OpCode.OP_CONSTANT, constant)
 
 
-@debug
+@expose
 def end_compiler(resolver):
     # type: (Parser) -> Parser
     """Implement end of expression."""
     return emit_return(resolver)
 
 
-@debug
+@expose
 def binary(resolver):
     # type: (Parser) -> Parser
     """Implements infix parser for binary operations."""
@@ -276,7 +281,7 @@ def binary(resolver):
     return resolver
 
 
-@debug
+@expose
 def expression(resolver):
     # type: (Parser) -> Parser
     """Compiles expression."""
@@ -284,7 +289,7 @@ def expression(resolver):
     return consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
 
 
-@debug
+@expose
 def grouping(resolver):
     # type: (Parser) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
@@ -292,7 +297,7 @@ def grouping(resolver):
     return consume(resolver, scanner.TokenType.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
 
 
-@debug
+@expose
 def number(resolver):
     # type: (Parser) -> Parser
     """Append number literal to bytecode."""
@@ -303,7 +308,7 @@ def number(resolver):
     return emit_constant(resolver, val)
 
 
-@debug
+@expose
 def unary(resolver):
     # type: (Parser) -> Parser
     """Comsumes leading minus and appends negated value."""
@@ -368,11 +373,14 @@ def get_rule(resolver, token_type):
     )
 
 
-def compile(source, bytecode):
-    # type: (scanner.Source, chunk.Chunk) -> bool
+def compile(source, bytecode, debug_level):
+    # type: (scanner.Source, chunk.Chunk, int) -> bool
     """Compiles source code into tokens."""
     reader = scanner.init_scanner(source)
-    resolver = init_parser(reader, bytecode)
+    resolver = init_parser(reader, bytecode, debug_level)
+
+    if debug_level >= 2:
+        print("\n== tokens ==")
 
     resolver = advance(resolver)
 
@@ -385,4 +393,9 @@ def compile(source, bytecode):
         resolver = expression(resolver)
 
     resolver = end_compiler(resolver)
+
+    if debug_level >= 1:
+        assert resolver.bytecode is not None
+        debug.disassemble_chunk(resolver.bytecode, "script")
+
     return not resolver.had_error

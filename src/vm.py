@@ -146,13 +146,13 @@ def run(emulator):
             return InterpretResult.INTERPRET_OK, constant
 
 
-def interpret(emulator, source):
-    # type: (VM, scanner.Source) -> Tuple[InterpretResult, Optional[value.Value]]
+def interpret(emulator, source, debug_level):
+    # type: (VM, scanner.Source, int) -> Tuple[InterpretResult, Optional[value.Value]]
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
     bytecode = chunk.init_chunk()
 
-    if not compiler.compile(source, bytecode):
+    if not compiler.compile(source, bytecode, debug_level):
         bytecode = chunk.free_chunk(bytecode)
 
         return InterpretResult.INTERPRET_COMPILE_ERROR, None
