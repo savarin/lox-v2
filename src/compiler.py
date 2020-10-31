@@ -278,7 +278,8 @@ def number(resolver):
     # type: (Parser) -> Parser
     """Append number literal to bytecode."""
     assert resolver.previous is not None
-    val = float(resolver.previous.start)
+    assert resolver.previous.source is not None
+    val = float(resolver.previous.source)
     return emit_constant(resolver, val)
 
 

@@ -44,12 +44,13 @@ class TokenType(enum.Enum):
 
 
 class Token():
-    def __init__(self, token_type, start, length, line):
-        # type: (TokenType, int, int, int) -> None
+    def __init__(self, token_type, start, length, source, line):
+        # type: (TokenType, int, int, Optional[str], int) -> None
         """Stores details of tokens converted from source code."""
         self.token_type = token_type
         self.start = start
         self.length = length
+        self.source = source
         self.line = line
 
 
@@ -158,10 +159,12 @@ def match(reader, expected):
 def make_token(reader, token_type):
     # type: (Scanner, TokenType) -> Token
     """Constructor-like function to create tokens."""
+    assert reader.source is not None
     return Token(
         token_type=token_type,
         start=reader.start,
         length=reader.current - reader.start,
+        source=reader.source[reader.start:reader.current],
         line=reader.line,
     )
 
@@ -173,6 +176,7 @@ def error_token(reader, message):
         token_type=TokenType.TOKEN_ERROR,
         start=0,
         length=len(message),
+        source=None,
         line=reader.line,
     )
 
