@@ -18,27 +18,18 @@ class TokenType(enum.Enum):
     TOKEN_STAR = "TOKEN_STAR"
 
     # One or two character tokens
-    TOKEN_BANG = "TOKEN_BANG"
-    TOKEN_BANG_EQUAL = "TOKEN_BANG_EQUAL"
     TOKEN_EQUAL = "TOKEN_EQUAL"
     TOKEN_EQUAL_EQUAL = "TOKEN_EQUAL_EQUAL"
-    TOKEN_GREATER = "TOKEN_GREATER"
-    TOKEN_GREATER_EQUAL = "TOKEN_GREATER_EQUAL"
-    TOKEN_LESS = "TOKEN_LESS"
-    TOKEN_LESS_EQUAL = "TOKEN_LESS_EQUAL"
 
     # Literals
     TOKEN_IDENTIFIER = "TOKEN_IDENTIFIER"
-    TOKEN_STRING = "TOKEN_STRING"
     TOKEN_NUMBER = "TOKEN_NUMBER"
 
     # Keywords
-    TOKEN_FALSE = "TOKEN_FALSE"
     TOKEN_FUN = "TOKEN_FUN"
+    TOKEN_LET = "TOKEN_LET"
     TOKEN_PRINT = "TOKEN_PRINT"
     TOKEN_RETURN = "TOKEN_RETURN"
-    TOKEN_TRUE = "TOKEN_TRUE"
-    TOKEN_VAR = "TOKEN_VAR"
     TOKEN_ERROR = "TOKEN_ERROR"
     TOKEN_EOF = "TOKEN_EOF"
 
@@ -67,10 +58,7 @@ single_token_map = {
 }
 
 double_token_map = {
-    "!": (TokenType.TOKEN_BANG_EQUAL, TokenType.TOKEN_BANG),
     "=": (TokenType.TOKEN_EQUAL_EQUAL, TokenType.TOKEN_EQUAL),
-    "<": (TokenType.TOKEN_LESS_EQUAL, TokenType.TOKEN_LESS),
-    ">": (TokenType.TOKEN_GREATER_EQUAL, TokenType.TOKEN_GREATER),
 }
 
 
@@ -228,21 +216,14 @@ def identifier_type(reader):
     assert reader.source is not None
     character = reader.source[reader.start]
 
-    if character == "l":
-        return check_keyword(reader, 1, 2, "et", TokenType.TOKEN_VAR)
+    if character == "f":
+        return check_keyword(reader, 1, 2, "un", TokenType.TOKEN_FUN)
+    elif character == "l":
+        return check_keyword(reader, 1, 2, "et", TokenType.TOKEN_LET)
     elif character == "p":
         return check_keyword(reader, 1, 4, "rint", TokenType.TOKEN_PRINT)
     elif character == "r":
         return check_keyword(reader, 1, 5, "eturn", TokenType.TOKEN_RETURN)
-    elif character == "t":
-        return check_keyword(reader, 1, 3, "rue", TokenType.TOKEN_TRUE)
-    elif character == "f":
-        if reader.current - reader.start > 1:
-            next_character = reader.source[reader.start + 1]
-            if next_character == "a":
-                return check_keyword(reader, 2, 3, "lse", TokenType.TOKEN_FALSE)
-            if next_character == "u":
-                return check_keyword(reader, 2, 1, "n", TokenType.TOKEN_FUN)
 
     return TokenType.TOKEN_IDENTIFIER
 
@@ -273,21 +254,6 @@ def number(reader):
     return make_token(reader, TokenType.TOKEN_NUMBER)
 
 
-def string(reader):
-    # type: (Scanner) -> Token
-    """Convert string into token."""
-    while peek(reader) != '"' and not is_at_end(reader):
-        if peek(reader) == "\n":
-            reader.line += 1
-        reader, _ = advance(reader)
-
-    if is_at_end(reader):
-        return error_token(reader, "Unterminated string.")
-
-    reader, _ = advance(reader)
-    return make_token(reader, TokenType.TOKEN_STRING)
-
-
 def scan_token(reader):
     # type: (Scanner) -> Token
     """Parses through source code and converts into tokens."""
@@ -315,8 +281,5 @@ def scan_token(reader):
             return make_token(reader, double_token_map[character][0])
         else:
             return make_token(reader, double_token_map[character][1])
-
-    elif character == '"':
-        return string(reader)
 
     return error_token(reader, "Unexpected character.")

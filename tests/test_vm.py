@@ -57,21 +57,21 @@ def test_basic_subtract():
 def test_basic_multiply():
     # type: () -> None
     emulator = vm.init_vm()
-    source = "2 * 2;"
+    source = "3 * 3;"
 
     result, constant = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 4
+    assert constant == 9
 
 
 def test_basic_divide():
     # type: () -> None
     emulator = vm.init_vm()
-    source = "4 / 2;"
+    source = "9 / 3;"
 
     result, constant = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 2
+    assert constant == 3
 
 
 def test_basic_negate():
