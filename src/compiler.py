@@ -242,7 +242,7 @@ def expression(resolver):
 def grouping(resolver):
     # type: (Parser) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
-    expression()
+    expression(resolver)
     return consume(resolver, scanner.TokenType.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
 
 

@@ -26,7 +26,8 @@ def test_init_vm():
 
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN, 123)
 
-    result, constant = vm.interpret(emulator, bytecode)
+    emulator.bytecode = bytecode
+    result, constant = vm.run(emulator)
     assert result == vm.InterpretResult.INTERPRET_OK
     assert constant == -1.0
 
