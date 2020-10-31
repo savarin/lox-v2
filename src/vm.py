@@ -2,6 +2,7 @@ import enum
 from typing import List, Optional, Tuple
 
 import chunk
+import compiler
 import value
 
 STACK_MAX = 16
@@ -146,10 +147,14 @@ def interpret(emulator, source):
     # type: (VM, chunk.Chunk) -> Tuple[InterpretResult, value.Value]
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
-    compile(source)
-    return InterpretResult.INTERPRET_OK
+    bytecode = chunk.init_chunk()
 
-    # emulator.bytecode = bytecode
-    # emulator.ip = 0
+    if not compiler.compile(source):
+        bytecode.free_chunk()
+        return InterpretResult.INTERPRET_COMPILE_ERROR
 
-    # return run(emulator)
+    emulator.bytecode = bytecode
+    result, constant = run(emulator)
+
+    free_vm(emulator)
+    return result

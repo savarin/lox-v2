@@ -94,6 +94,16 @@ def init_scanner(source):
     return reader
 
 
+def is_alpha(character):
+    # type: (Character) -> bool
+    """Checks if character is an alphabet."""
+    is_lowercase = character >= "a" and character <= "z"
+    is_uppercase = character >= "A" and character <= "Z"
+    is_underscore = character == "_"
+
+    return is_lowercase or is_uppercase or is_underscore
+
+
 def is_digit(character):
     # type: (Character) -> bool
     """Checks if character is a digit."""
@@ -193,6 +203,56 @@ def skip_whitespace(reader):
         return reader
 
 
+def check_keyword(reader, start, length, rest, token_type):
+    # type: (Scanner, int, int, str, TokenType) -> TokenType
+    """Utility function to check full keyword matches."""
+    index_start = reader.start + start
+    index_end = index_start + length
+
+    assert reader.source is not None
+    is_correct_length = reader.current - reader.start == start + length
+    is_actual_match = reader.source[index_start:index_end] == rest
+
+    if is_correct_length and is_actual_match:
+        return token_type
+
+    return TokenType.TOKEN_IDENTIFIER
+
+
+def identifier_type(reader):
+    # type: (Scanner) -> TokenType
+    """Checks identifier keywords and returns identifier token type."""
+    assert reader.source is not None
+    character = reader.source[reader.start]
+
+    if character == "l":
+        return check_keyword(reader, 1, 2, "et", TokenType.TOKEN_VAR)
+    elif character == "p":
+        return check_keyword(reader, 1, 4, "rint", TokenType.TOKEN_PRINT)
+    elif character == "r":
+        return check_keyword(reader, 1, 5, "eturn", TokenType.TOKEN_RETURN)
+    elif character == "t":
+        return check_keyword(reader, 1, 3, "rue", TokenType.TOKEN_TRUE)
+    elif character == "f":
+        if reader.current - reader.start > 1:
+            next_character = reader.source[reader.start + 1]
+            if next_character == "a":
+                return check_keyword(reader, 2, 3, "lse", TokenType.TOKEN_FALSE)
+            if next_character == "u":
+                return check_keyword(reader, 2, 1, "n", TokenType.TOKEN_FUN)
+
+    return TokenType.TOKEN_IDENTIFIER
+
+
+def identifier(reader):
+    # type: (Scanner) -> Token
+    """Converts identifier into token."""
+    while is_alpha(peek(reader)) or is_digit(peek(reader)):
+        reader, _ = advance(reader)
+
+    return make_token(reader, identifier_type(reader))
+
+
 def number(reader):
     # type: (Scanner) -> Token
     """Convert number into token."""
@@ -235,6 +295,9 @@ def scan_token(reader):
         return make_token(reader, TokenType.TOKEN_EOF)
 
     reader, character = advance(reader)
+
+    if is_alpha(character):
+        return identifier(reader)
 
     if is_digit(character):
         return number(reader)
