@@ -142,11 +142,14 @@ def run(emulator):
             return InterpretResult.INTERPRET_OK, constant
 
 
-def interpret(emulator, bytecode):
+def interpret(emulator, source):
     # type: (VM, chunk.Chunk) -> Tuple[InterpretResult, value.Value]
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
-    emulator.bytecode = bytecode
-    emulator.ip = 0
+    compile(source)
+    return InterpretResult.INTERPRET_OK
 
-    return run(emulator)
+    # emulator.bytecode = bytecode
+    # emulator.ip = 0
+
+    # return run(emulator)
