@@ -164,8 +164,7 @@ def advance(resolver):
         if current_token.token_type != scanner.TokenType.TOKEN_ERROR:
             break
 
-        # TODO: Check implementation of error message
-        resolver = error_at_current(resolver, str(current_token.start))
+        resolver = error_at_current(resolver, current_token.source)
 
     return resolver
 
