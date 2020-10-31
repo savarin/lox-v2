@@ -31,4 +31,3 @@ def test_init_vm():
     assert constant == -1.0
 
     emulator = vm.free_vm(emulator)
-    bytecode = chunk.free_chunk(bytecode)

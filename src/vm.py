@@ -44,7 +44,11 @@ def init_vm():
 def free_vm(emulator):
     # type: (VM) -> VM
     """Deallocates memory in VM."""
-    return emulator
+    assert emulator.bytecode is not None
+    emulator.bytecode = chunk.free_chunk(emulator.bytecode)
+
+    emulator.ip = 0
+    return reset_stack(emulator)
 
 
 def push(emulator, val):
