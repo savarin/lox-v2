@@ -1,4 +1,5 @@
 import enum
+import functools
 from typing import Dict, List, Optional, Tuple
 
 import chunk
@@ -6,6 +7,18 @@ import scanner
 import value
 
 UINT8_MAX = 256
+
+
+def debug(f):
+    """Print the function signature and return value"""
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        print("  {}".format(f.__name__))
+        value = f(*args, **kwargs)
+        return value
+
+    return wrapper
+
 
 # yapf: disable
 rule_map = {
@@ -84,6 +97,7 @@ def init_parser(reader, bytecode):
     return resolver
 
 
+@debug
 def error_at(resolver, token, message):
     # type: (Parser, scanner.Token, str) -> Parser
     """Expose error and details pertaining to error."""
@@ -95,7 +109,7 @@ def error_at(resolver, token, message):
     print("[line {}] Error".format(token.line), end=" ")
 
     if token.token_type == scanner.TokenType.TOKEN_EOF:
-        print("at end", end=" ")
+        print("at end")
     elif token.token_type == scanner.TokenType.TOKEN_ERROR:
         pass
     else:
@@ -105,11 +119,12 @@ def error_at(resolver, token, message):
         assert resolver.reader is not None
         assert resolver.reader.source is not None
         current_token = resolver.reader.source[token_start:token_end]
-        print("at {}".format(current_token), end=" ")
+        print("at {}".format(current_token))
 
     return resolver
 
 
+@debug
 def error(resolver, message):
     # type: (Parser, str) -> Parser
     """Extract error location from token just consumed."""
@@ -117,6 +132,7 @@ def error(resolver, message):
     return error_at(resolver, resolver.previous, message)
 
 
+@debug
 def error_at_current(resolver, message):
     # type: (Parser, str) -> Parser
     """Extract error location from current token."""
@@ -124,6 +140,7 @@ def error_at_current(resolver, message):
     return error_at(resolver, resolver.current, message)
 
 
+@debug
 def advance(resolver):
     # type: (Parser) -> Parser
     """Steps through token stream and stores for later use."""
@@ -146,6 +163,7 @@ def advance(resolver):
     return resolver
 
 
+@debug
 def consume(resolver, token_type, message):
     # type: (Parser, scanner.TokenType, str) -> Parser
     """Reads the next token and validates token has expected type."""
@@ -156,6 +174,7 @@ def consume(resolver, token_type, message):
     return error_at_current(resolver, message)
 
 
+@debug
 def emit_byte(resolver, byte):
     # type: (Parser, chunk.Byte) -> Parser
     """Append single byte to bytecode."""
@@ -166,6 +185,7 @@ def emit_byte(resolver, byte):
     return resolver
 
 
+@debug
 def emit_bytes(resolver, byte1, byte2):
     # type: (Parser, chunk.Byte, chunk.Byte) -> Parser
     """Append two bytes to bytecode."""
@@ -173,12 +193,14 @@ def emit_bytes(resolver, byte1, byte2):
     return emit_byte(resolver, byte2)
 
 
+@debug
 def emit_return(resolver):
     # type: (Parser) -> Parser
     """Clean up after complete compilation stage."""
     return emit_byte(resolver, chunk.OpCode.OP_RETURN)
 
 
+@debug
 def make_constant(resolver, val):
     # type: (Parser, value.Value) -> Tuple[Parser, Optional[value.Value]]
     """Add value to constant table."""
@@ -191,6 +213,7 @@ def make_constant(resolver, val):
     return resolver, constant
 
 
+@debug
 def emit_constant(resolver, val):
     # type: (Parser, value.Value) -> Parser
     """Append constant to bytecode."""
@@ -200,12 +223,14 @@ def emit_constant(resolver, val):
     return emit_bytes(resolver, chunk.OpCode.OP_CONSTANT, constant)
 
 
+@debug
 def end_compiler(resolver):
     # type: (Parser) -> Parser
     """Implement end of expression."""
     return emit_return(resolver)
 
 
+@debug
 def binary(resolver):
     # type: (Parser) -> Parser
     """Implements infix parser for binary operations."""
@@ -232,6 +257,7 @@ def binary(resolver):
     return resolver
 
 
+@debug
 def expression(resolver):
     #
     """
@@ -239,6 +265,7 @@ def expression(resolver):
     parse_precedence(resolver, Precedence.PREC_ASSIGNMENT)
 
 
+@debug
 def grouping(resolver):
     # type: (Parser) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
@@ -246,6 +273,7 @@ def grouping(resolver):
     return consume(resolver, scanner.TokenType.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
 
 
+@debug
 def number(resolver):
     # type: (Parser) -> Parser
     """Append number literal to bytecode."""
@@ -254,6 +282,7 @@ def number(resolver):
     return emit_constant(resolver, val)
 
 
+@debug
 def unary(resolver):
     # type: (Parser) -> Parser
     """Comsumes leading minus and appends negated value."""
@@ -270,6 +299,7 @@ def unary(resolver):
     return resolver
 
 
+@debug
 def parse_precedence(resolver, precedence):
     # type: (Parser, Precedence) -> None
     """Starts at current token and parses expression at given precedence level
@@ -295,6 +325,7 @@ def parse_precedence(resolver, precedence):
         infix_rule(resolver)
 
 
+@debug
 def get_rule(resolver, token_type):
     # type: (Parser, scanner.TokenType) -> ParseRule
     """Custom function to convert TokenType to ParseRule. This allows the
@@ -325,10 +356,6 @@ def compile(source, bytecode):
     resolver = init_parser(reader, bytecode)
 
     resolver = advance(resolver)
-
-    # breakpoint()
-    # print(source)
-    # import sys; sys.exit()
 
     expression(resolver)
     resolver = consume(resolver, scanner.TokenType.TOKEN_EOF, "Expect end of expression.")
