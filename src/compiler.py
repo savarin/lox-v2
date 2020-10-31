@@ -77,221 +77,225 @@ class Parser():
 def init_parser(reader, bytecode):
     # type: (scanner.Scanner, chunk.Chunk) -> Parser
     """Initialize new parser."""
-    viewer = Parser()
-    viewer.reader = reader
-    viewer.bytecode = bytecode
+    resolver = Parser()
+    resolver.reader = reader
+    resolver.bytecode = bytecode
 
-    return viewer
+    return resolver
 
 
-def error_at(viewer, token, message):
+def error_at(resolver, token, message):
     # type: (Parser, scanner.Token, str) -> Parser
     """Expose error and details pertaining to error."""
-    if viewer.panic_mode:
-        return viewer
+    if resolver.panic_mode:
+        return resolver
 
-    viewer.panic_mode = True
+    resolver.panic_mode = True
 
     print("[line {}] Error".format(token.line), end=" ")
 
     if token.token_type == scanner.TokenType.TOKEN_EOF:
-        print(" at end", end=" ")
+        print("at end", end=" ")
     elif token.token_type == scanner.TokenType.TOKEN_ERROR:
         pass
     else:
         token_start = token.start
         token_end = token_start + token.length
 
-        assert viewer.reader is not None
-        assert viewer.reader.source is not None
-        current_token = viewer.reader.source[token_start:token_end]
-        print(" at {}".format(current_token), end=" ")
+        assert resolver.reader is not None
+        assert resolver.reader.source is not None
+        current_token = resolver.reader.source[token_start:token_end]
+        print("at {}".format(current_token), end=" ")
 
-    return viewer
+    return resolver
 
 
-def error(viewer, message):
+def error(resolver, message):
     # type: (Parser, str) -> Parser
     """Extract error location from token just consumed."""
-    assert viewer.previous is not None
-    return error_at(viewer, viewer.previous, message)
+    assert resolver.previous is not None
+    return error_at(resolver, resolver.previous, message)
 
 
-def error_at_current(viewer, message):
+def error_at_current(resolver, message):
     # type: (Parser, str) -> Parser
     """Extract error location from current token."""
-    assert viewer.current is not None
-    return error_at(viewer, viewer.current, message)
+    assert resolver.current is not None
+    return error_at(resolver, resolver.current, message)
 
 
-def advance(viewer):
+def advance(resolver):
     # type: (Parser) -> Parser
     """Steps through token stream and stores for later use."""
-    viewer.previous = viewer.current
+    resolver.previous = resolver.current
 
     while True:
-        assert viewer.reader is not None
-        viewer.current = scanner.scan_token(viewer.reader)
+        assert resolver.reader is not None
+        current_token = scanner.scan_token(resolver.reader)
+        resolver.current = current_token
 
-        if viewer.current.token_type != scanner.TokenType.TOKEN_ERROR:
+        if current_token.token_type:
+            print(current_token.token_type)
+
+        if current_token.token_type != scanner.TokenType.TOKEN_ERROR:
             break
 
         # TODO: Check implementation of error message
-        viewer = error_at_current(viewer, str(viewer.current.start))
+        resolver = error_at_current(resolver, str(current_token.start))
 
-    return viewer
+    return resolver
 
 
-def consume(viewer, token_type, message):
+def consume(resolver, token_type, message):
     # type: (Parser, scanner.TokenType, str) -> Parser
     """Reads the next token and validates token has expected type."""
-    assert viewer.current is not None
-    if viewer.current.token_type == token_type:
-        return advance(viewer)
+    assert resolver.current is not None
+    if resolver.current.token_type == token_type:
+        return advance(resolver)
 
-    return error_at_current(viewer, message)
+    return error_at_current(resolver, message)
 
 
-def emit_byte(viewer, byte):
+def emit_byte(resolver, byte):
     # type: (Parser, chunk.Byte) -> Parser
     """Append single byte to bytecode."""
-    assert viewer.bytecode is not None
-    assert viewer.previous is not None
-    viewer.bytecode = chunk.write_chunk(viewer.bytecode, byte, viewer.previous.line)
+    assert resolver.bytecode is not None
+    assert resolver.previous is not None
+    resolver.bytecode = chunk.write_chunk(resolver.bytecode, byte, resolver.previous.line)
 
-    return viewer
+    return resolver
 
 
-def emit_bytes(viewer, byte1, byte2):
+def emit_bytes(resolver, byte1, byte2):
     # type: (Parser, chunk.Byte, chunk.Byte) -> Parser
     """Append two bytes to bytecode."""
-    viewer = emit_byte(viewer, byte1)
-    return emit_byte(viewer, byte2)
+    resolver = emit_byte(resolver, byte1)
+    return emit_byte(resolver, byte2)
 
 
-def emit_return(viewer):
+def emit_return(resolver):
     # type: (Parser) -> Parser
     """Clean up after complete compilation stage."""
-    return emit_byte(viewer, chunk.OpCode.OP_RETURN)
+    return emit_byte(resolver, chunk.OpCode.OP_RETURN)
 
 
-def make_constant(viewer, val):
+def make_constant(resolver, val):
     # type: (Parser, value.Value) -> Tuple[Parser, Optional[value.Value]]
     """Add value to constant table."""
-    assert viewer.bytecode is not None
-    viewer.bytecode, constant = chunk.add_constant(viewer.bytecode, val)
+    assert resolver.bytecode is not None
+    resolver.bytecode, constant = chunk.add_constant(resolver.bytecode, val)
 
     if constant > UINT8_MAX:
-        return error(viewer, "Too many constants in one chunk."), None
+        return error(resolver, "Too many constants in one chunk."), None
 
-    return viewer, constant
+    return resolver, constant
 
 
-def emit_constant(viewer, val):
+def emit_constant(resolver, val):
     # type: (Parser, value.Value) -> Parser
     """Append constant to bytecode."""
-    viewer, constant = make_constant(viewer, val)
+    resolver, constant = make_constant(resolver, val)
 
     assert constant is not None
-    return emit_bytes(viewer, chunk.OpCode.OP_CONSTANT, constant)
+    return emit_bytes(resolver, chunk.OpCode.OP_CONSTANT, constant)
 
 
-def end_compiler(viewer):
+def end_compiler(resolver):
     # type: (Parser) -> Parser
     """Implement end of expression."""
-    return emit_return(viewer)
+    return emit_return(resolver)
 
 
-def binary(viewer):
+def binary(resolver):
     # type: (Parser) -> Parser
     """Implements infix parser for binary operations."""
     # Remember the operator
-    assert viewer.previous is not None
-    operator_type = viewer.previous.token_type
+    assert resolver.previous is not None
+    operator_type = resolver.previous.token_type
 
     # Compile the right operand.
-    rule = get_rule(viewer, operator_type)
+    rule = get_rule(resolver, operator_type)
 
     # Get precedence which has 1 priority level above precedence of current rule
     precedence = Precedence(rule.precedence.value + 1)
-    parse_precedence(viewer, precedence)
+    parse_precedence(resolver, precedence)
 
     if operator_type == scanner.TokenType.TOKEN_PLUS:
-        return emit_byte(viewer, chunk.OpCode.OP_ADD)
+        return emit_byte(resolver, chunk.OpCode.OP_ADD)
     elif operator_type == scanner.TokenType.TOKEN_MINUS:
-        return emit_byte(viewer, chunk.OpCode.OP_SUBTRACT)
+        return emit_byte(resolver, chunk.OpCode.OP_SUBTRACT)
     elif operator_type == scanner.TokenType.TOKEN_STAR:
-        return emit_byte(viewer, chunk.OpCode.OP_MULTIPLY)
+        return emit_byte(resolver, chunk.OpCode.OP_MULTIPLY)
     elif operator_type == scanner.TokenType.TOKEN_SLASH:
-        return emit_byte(viewer, chunk.OpCode.OP_DIVIDE)
+        return emit_byte(resolver, chunk.OpCode.OP_DIVIDE)
 
-    return viewer
+    return resolver
 
 
-def expression():
+def expression(resolver):
     #
     """
     """
-    parse_precedence(Precedence.PREC_ASSIGNMENT)
+    parse_precedence(resolver, Precedence.PREC_ASSIGNMENT)
 
 
-def grouping(viewer):
+def grouping(resolver):
     # type: (Parser) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
     expression()
-    return consume(viewer, scanner.TokenType.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
+    return consume(resolver, scanner.TokenType.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
 
 
-def number(viewer):
+def number(resolver):
     # type: (Parser) -> Parser
     """Append number literal to bytecode."""
-    assert viewer.previous is not None
-    val = float(viewer.previous.start)
-    return emit_constant(viewer, val)
+    assert resolver.previous is not None
+    val = float(resolver.previous.start)
+    return emit_constant(resolver, val)
 
 
-def unary(viewer):
+def unary(resolver):
     # type: (Parser) -> Parser
     """Comsumes leading minus and appends negated value."""
-    assert viewer.previous is not None
-    operator_type = viewer.previous.token_type
+    assert resolver.previous is not None
+    operator_type = resolver.previous.token_type
 
     # Compile the operand
-    parse_precedence(viewer, Precedence.PREC_UNARY)
+    parse_precedence(resolver, Precedence.PREC_UNARY)
 
     # Emit the operator instruction
     if operator_type == scanner.TokenType.TOKEN_MINUS:
-        viewer = emit_byte(viewer, chunk.OpCode.OP_NEGATE)
+        resolver = emit_byte(resolver, chunk.OpCode.OP_NEGATE)
 
-    return viewer
+    return resolver
 
 
-def parse_precedence(viewer, precedence):
+def parse_precedence(resolver, precedence):
     # type: (Parser, Precedence) -> None
     """Starts at current token and parses expression at given precedence level
     or higher."""
-    viewer = advance(viewer)
+    resolver = advance(resolver)
 
-    assert viewer.previous is not None
-    prefix_rule = get_rule(viewer, viewer.previous.token_type).prefix
+    assert resolver.previous is not None
+    prefix_rule = get_rule(resolver, resolver.previous.token_type).prefix
 
     if prefix_rule is None:
-        error(viewer, "Expect expression")
+        error(resolver, "Expect expression")
         return None
 
-    prefix_rule(viewer)
+    prefix_rule(resolver)
 
-    assert viewer.current is not None
-    while precedence.value <= get_rule(viewer, viewer.current.token_type).precedence.value:
-        viewer = advance(viewer)
+    assert resolver.current is not None
+    while precedence.value <= get_rule(resolver, resolver.current.token_type).precedence.value:
+        resolver = advance(resolver)
 
-        assert viewer.previous is not None
-        infix_rule = get_rule(viewer, viewer.previous.token_type).infix
+        assert resolver.previous is not None
+        infix_rule = get_rule(resolver, resolver.previous.token_type).infix
 
-        infix_rule(viewer)
+        infix_rule(resolver)
 
 
-def get_rule(viewer, token_type):
+def get_rule(resolver, token_type):
     # type: (Parser, scanner.TokenType) -> ParseRule
     """Custom function to convert TokenType to ParseRule. This allows the
     rule_map to consist of strings, which are then replaced by respective
@@ -318,11 +322,16 @@ def compile(source, bytecode):
     # type: (scanner.Source, chunk.Chunk) -> bool
     """Compiles source code into tokens."""
     reader = scanner.init_scanner(source)
-    viewer = init_parser(reader, bytecode)
+    resolver = init_parser(reader, bytecode)
 
-    viewer = advance(viewer)
-    expression()
-    viewer = consume(viewer, scanner.TokenType.TOKEN_EOF, "Expect end of expression.")
-    viewer = end_compiler(viewer)
+    resolver = advance(resolver)
 
-    return not viewer.had_error
+    # breakpoint()
+    # print(source)
+    # import sys; sys.exit()
+
+    expression(resolver)
+    resolver = consume(resolver, scanner.TokenType.TOKEN_EOF, "Expect end of expression.")
+    resolver = end_compiler(resolver)
+
+    return not resolver.had_error

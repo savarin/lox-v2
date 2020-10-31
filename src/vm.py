@@ -25,6 +25,7 @@ class VM():
         self.ip = 0
         self.stack = None  # type: Optional[List]
         self.stack_top = 0
+        self.counter = 0
 
 
 def reset_stack(emulator):
@@ -150,12 +151,13 @@ def interpret(emulator, source):
     # TODO: Compare implementation for vm.ip in 15.1.1
     bytecode = chunk.init_chunk()
 
-    if not compiler.compile(source):
+    if not compiler.compile(source, bytecode):
         bytecode = chunk.free_chunk(bytecode)
+
         return InterpretResult.INTERPRET_COMPILE_ERROR
 
     emulator.bytecode = bytecode
     result, constant = run(emulator)
 
     free_vm(emulator)
-    return result
+    return result, constant
