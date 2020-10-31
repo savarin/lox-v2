@@ -1,7 +1,25 @@
-from typing import Optional
+import enum
+from typing import Optional, Tuple
 
 import chunk
 import scanner
+import value
+
+UINT8_MAX = 256
+
+
+# yapf: disable
+class Precedence(enum.Enum):
+    PREC_NONE = 1
+    PREC_ASSIGNMENT = 2  # =
+    PREC_EQUALITY = 3    # == !=
+    PREC_COMPARISON = 4  # < > <= >=
+    PREC_TERM = 5        # + -
+    PREC_FACTOR = 6      # * /
+    PREC_UNARY = 7       # ! -
+    PREC_CALL = 8        # ()
+    PREC_PRIMARY = 9
+# yapf: enable
 
 
 class Parser():
@@ -117,10 +135,102 @@ def emit_return(viewer):
     return emit_byte(viewer, chunk.OpCode.OP_RETURN)
 
 
+def make_constant(viewer, val):
+    # type: (Parser, value.Value) -> Tuple[Parser, Optional[value.Value]]
+    """Add value to constant table."""
+    assert viewer.bytecode is not None
+    viewer.bytecode, constant = chunk.add_constant(viewer.bytecode, val)
+
+    if constant > UINT8_MAX:
+        return error(viewer, "Too many constants in one chunk."), None
+
+    return viewer, constant
+
+
+def emit_constant(viewer, val):
+    # type: (Parser, value.Value) -> Parser
+    """Append constant to bytecode."""
+    viewer, constant = make_constant(viewer, val)
+
+    assert constant is not None
+    return emit_bytes(viewer, chunk.OpCode.OP_CONSTANT, constant)
+
+
 def end_compiler(viewer):
     # type: (Parser) -> Parser
     """Implement end of expression."""
     return emit_return(viewer)
+
+
+def binary(viewer):
+    # type: (Parser) -> Parser
+    """Implements infix parser for binary operations."""
+    # Remember the operator
+    assert viewer.previous is not None
+    operator_type = viewer.previous.token_type
+
+    # Compile the right operand.
+    rule = get_rule(operator_type)
+
+    # Get precedence which has 1 priority level above precedence of current rule
+    precedence = Precedence(rule.precedence.value + 1)
+    parse_precedence(viewer, precedence)
+
+    if operator_type == scanner.TokenType.TOKEN_PLUS:
+        return emit_byte(viewer, chunk.OpCode.OP_ADD)
+    elif operator_type == scanner.TokenType.TOKEN_MINUS:
+        return emit_byte(viewer, chunk.OpCode.OP_SUBTRACT)
+    elif operator_type == scanner.TokenType.TOKEN_STAR:
+        return emit_byte(viewer, chunk.OpCode.OP_MULTIPLY)
+    elif operator_type == scanner.TokenType.TOKEN_SLASH:
+        return emit_byte(viewer, chunk.OpCode.OP_DIVIDE)
+
+    return viewer
+
+
+def expression():
+    #
+    """
+    """
+    parse_precedence(Precedence.PREC_ASSIGNMENT)
+
+
+def grouping(viewer):
+    # type: (Parser) -> Parser
+    """Compiles expression between parentheses and consumes parentheses."""
+    expression()
+    return consume(viewer, scanner.TokenType.TOKEN_RIGHT_PAREN, "Expect ')' after expression.")
+
+
+def number(viewer):
+    # type: (Parser) -> Parser
+    """Append number literal to bytecode."""
+    assert viewer.previous is not None
+    val = float(viewer.previous.start)
+    return emit_constant(viewer, val)
+
+
+def unary(viewer):
+    # type: (Parser) -> Parser
+    """Comsumes leading minus and appends negated value."""
+    assert viewer.previous is not None
+    operator_type = viewer.previous.token_type
+
+    # Compile the operand
+    parse_precedence(viewer, Precedence.PREC_UNARY)
+
+    # Emit the operator instruction
+    if operator_type == scanner.TokenType.TOKEN_MINUS:
+        viewer = emit_byte(viewer, chunk.OpCode.OP_NEGATE)
+
+    return viewer
+
+
+def parse_precedence(viewer, precedence):
+    # type: (Parser, Precedence) -> None
+    """Starts at current token and parses expression at given precedence level
+    or higher."""
+    pass
 
 
 def compile(source, bytecode):
