@@ -27,9 +27,10 @@ def test_manual_init():
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN, 123)
 
     emulator.bytecode = bytecode
-    result, constant = vm.run(emulator)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == -1.0
+    result = vm.run(emulator)
+    assert result[0] == vm.InterpretResult.INTERPRET_OK
+    assert result[1] == -1.0
+    assert result[2] is None
 
     emulator = vm.free_vm(emulator)
 
@@ -39,9 +40,12 @@ def test_basic_add():
     emulator = vm.init_vm()
     source = "1 + 1;"
 
-    result, constant = vm.interpret(emulator, source, 0)
+    result, constant, opcode = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
     assert constant == 2
+    assert opcode is None
+
+    emulator = vm.free_vm(emulator)
 
 
 def test_basic_subtract():
@@ -49,9 +53,12 @@ def test_basic_subtract():
     emulator = vm.init_vm()
     source = "2 - 1;"
 
-    result, constant = vm.interpret(emulator, source, 0)
+    result, constant, opcode = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
     assert constant == 1
+    assert opcode is None
+
+    emulator = vm.free_vm(emulator)
 
 
 def test_basic_multiply():
@@ -59,9 +66,12 @@ def test_basic_multiply():
     emulator = vm.init_vm()
     source = "3 * 3;"
 
-    result, constant = vm.interpret(emulator, source, 0)
+    result, constant, opcode = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
     assert constant == 9
+    assert opcode is None
+
+    emulator = vm.free_vm(emulator)
 
 
 def test_basic_divide():
@@ -69,9 +79,12 @@ def test_basic_divide():
     emulator = vm.init_vm()
     source = "9 / 3;"
 
-    result, constant = vm.interpret(emulator, source, 0)
+    result, constant, opcode = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
     assert constant == 3
+    assert opcode is None
+
+    emulator = vm.free_vm(emulator)
 
 
 def test_basic_negate():
@@ -79,6 +92,22 @@ def test_basic_negate():
     emulator = vm.init_vm()
     source = "-1;"
 
-    result, constant = vm.interpret(emulator, source, 0)
+    result, constant, opcode = vm.interpret(emulator, source, 0)
     assert result == vm.InterpretResult.INTERPRET_OK
     assert constant == -1
+    assert opcode is None
+
+    emulator = vm.free_vm(emulator)
+
+
+def test_basic_print():
+    # type: () -> None
+    emulator = vm.init_vm()
+    source = "print 1;"
+
+    result, constant, opcode = vm.interpret(emulator, source, 0)
+    assert result == vm.InterpretResult.INTERPRET_OK
+    assert constant == 1
+    assert opcode == chunk.OpCode.OP_PRINT
+
+    emulator = vm.free_vm(emulator)

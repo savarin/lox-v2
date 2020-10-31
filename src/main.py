@@ -22,7 +22,7 @@ def read_file(emulator, path, debug_level=0):
     with open(path, "r") as f:
         source = f.read()
 
-    result, _ = vm.interpret(emulator, source, debug_level)
+    result, _, _ = vm.interpret(emulator, source, debug_level)
 
     if result == vm.InterpretResult.INTERPRET_COMPILE_ERROR:
         exit_code(65)

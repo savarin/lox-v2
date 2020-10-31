@@ -9,6 +9,7 @@ import value
 STACK_MAX = 16
 
 Operation = str
+InterpretResultTuple = Tuple["InterpretResult", Optional[value.Value], Optional[chunk.OpCode]]
 
 
 class InterpretResult(enum.Enum):
@@ -116,14 +117,19 @@ def binary_op(emulator, op):
 
 
 def run(emulator):
-    # type: (VM) -> Tuple[InterpretResult, value.Value]
+    # type: (VM) -> InterpretResultTuple
     """Executes instructions in bytecode."""
+    constant, opcode = None, None
+
     while True:
         emulator, instruction = read_byte(emulator)
 
         if instruction == chunk.OpCode.OP_CONSTANT:
             emulator, constant = read_constant(emulator)
             emulator = push(emulator, constant)
+
+        elif instruction == chunk.OpCode.OP_POP:
+            emulator, constant = pop(emulator)
 
         elif instruction == chunk.OpCode.OP_ADD:
             emulator = binary_op(emulator, "+")
@@ -139,16 +145,22 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_NEGATE:
             emulator, constant = pop(emulator)
-            emulator = push(emulator, -constant)
+            constant = -constant
+            emulator = push(emulator, constant)
+
+        elif instruction == chunk.OpCode.OP_PRINT:
+            emulator, constant = pop(emulator)
+            assert isinstance(instruction, chunk.OpCode)
+            opcode = instruction
+            print(constant)
 
         elif instruction == chunk.OpCode.OP_RETURN:
-            emulator, constant = pop(emulator)
-            print(constant)
-            return InterpretResult.INTERPRET_OK, constant
+            assert constant is not None
+            return InterpretResult.INTERPRET_OK, constant, opcode
 
 
 def interpret(emulator, source, debug_level):
-    # type: (VM, scanner.Source, int) -> Tuple[InterpretResult, Optional[value.Value]]
+    # type: (VM, scanner.Source, int) -> InterpretResultTuple
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
     bytecode = chunk.init_chunk()
@@ -156,10 +168,10 @@ def interpret(emulator, source, debug_level):
     if not compiler.compile(source, bytecode, debug_level):
         bytecode = chunk.free_chunk(bytecode)
 
-        return InterpretResult.INTERPRET_COMPILE_ERROR, None
+        return InterpretResult.INTERPRET_COMPILE_ERROR, None, None
 
     emulator.bytecode = bytecode
-    result, constant = run(emulator)
+    result_tuple = run(emulator)
 
     bytecode = chunk.free_chunk(bytecode)
-    return result, constant
+    return result_tuple

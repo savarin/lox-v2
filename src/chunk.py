@@ -4,23 +4,24 @@ from typing import List, Optional, Tuple, Union
 import memory
 import value
 
+Byte = Union["OpCode", value.Value]
+Code = Optional[List[Optional[Byte]]]
+Line = int
+Lines = Optional[List[Optional[Line]]]
+
 
 class OpCode(enum.Enum):
     """Each instruction has a 1-byte operation code, which controls what kind of
     instruction we're dealing with."""
     OP_CONSTANT = "OP_CONSTANT"
+    OP_POP = "OP_POP"
     OP_ADD = "OP_ADD"
     OP_SUBTRACT = "OP_SUBTRACT"
     OP_MULTIPLY = "OP_MULTIPLY"
     OP_DIVIDE = "OP_DIVIDE"
     OP_NEGATE = "OP_NEGATE"
+    OP_PRINT = "OP_PRINT"
     OP_RETURN = "OP_RETURN"
-
-
-Byte = Union[OpCode, value.Value]
-Code = Optional[List[Optional[Byte]]]
-Line = int
-Lines = Optional[List[Optional[Line]]]
 
 
 class Chunk():

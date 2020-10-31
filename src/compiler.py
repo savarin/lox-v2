@@ -270,12 +270,51 @@ def binary(resolver):
     return resolver
 
 
-@expose
 def expression(resolver):
-    # type: (Parser) -> Parser
+    # type: (Parser) -> None
     """Compiles expression."""
     parse_precedence(resolver, Precedence.PREC_ASSIGNMENT)
-    return consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
+
+
+@expose
+def expression_statement(resolver):
+    #
+    """
+    """
+    expression(resolver)
+    resolver = consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
+    return emit_byte(resolver, chunk.OpCode.OP_POP)
+
+
+@expose
+def print_statement(resolver):
+    #
+    """
+    """
+    expression(resolver)
+    resolver = consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
+    return emit_byte(resolver, chunk.OpCode.OP_PRINT)
+
+
+@expose
+def declaration(resolver):
+    #
+    """
+    """
+    return statement(resolver)
+
+
+@expose
+def statement(resolver):
+    #
+    """
+    """
+    resolver, condition = match(resolver, scanner.TokenType.TOKEN_PRINT)
+
+    if condition:
+        return print_statement(resolver)
+
+    return expression_statement(resolver)
 
 
 @expose
@@ -378,7 +417,8 @@ def compile(source, bytecode, debug_level):
         if condition:
             break
 
-        resolver = expression(resolver)
+        resolver = declaration(resolver)
+        # resolver = expression(resolver)
 
     resolver = end_compiler(resolver)
 
