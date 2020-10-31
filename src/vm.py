@@ -41,6 +41,7 @@ def init_vm():
     # type: () -> VM
     """Initialize new VM."""
     emulator = VM()
+
     return reset_stack(emulator)
 
 

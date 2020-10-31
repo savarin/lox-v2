@@ -33,6 +33,7 @@ def read_file(emulator, path, debug_level=0):
 
 def exit_code(error_code):
     # type: (int) -> None
+    """Expose error code and exit."""
     print("Exit: {}".format(error_code))
     sys.exit()
 

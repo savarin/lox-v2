@@ -353,8 +353,7 @@ def get_rule(resolver, token_type):
     # type: (Parser, scanner.TokenType) -> ParseRule
     """Custom function to convert TokenType to ParseRule. This allows the
     rule_map to consist of strings, which are then replaced by respective
-    classes in the conversion process.
-    """
+    classes in the conversion process."""
     type_map = {
         "binary": binary,
         "grouping": grouping,

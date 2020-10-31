@@ -88,7 +88,6 @@ def init_scanner(source):
     # type: (Source) -> Scanner
     """Initialize new scanner."""
     reader = Scanner()
-
     reader.source = source
     reader.line = 1
 
