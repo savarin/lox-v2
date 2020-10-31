@@ -10,7 +10,8 @@ UINT8_MAX = 256
 
 
 def debug(f):
-    """Print the function signature and return value"""
+    """Print the function signature and return value, implemented where function
+    returns resolver state."""
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         print("  {}".format(f.__name__))
@@ -175,19 +176,17 @@ def consume(resolver, token_type, message):
     return error_at_current(resolver, message)
 
 
-@debug
 def check(resolver, token_type):
-    #
-    """
-    """
+    # type: (Parser, scanner.TokenType) -> bool
+    """Checks current_token has given type."""
+    assert resolver.current is not None
     return resolver.current.token_type == token_type
 
 
 @debug
 def match(resolver, token_type):
-    #
-    """
-    """
+    # type: (Parser, scanner.TokenType) -> Tuple[Parser, bool]
+    """If current token has given type, consume token and return True."""
     if not check(resolver, token_type):
         return resolver, False
 
@@ -279,9 +278,8 @@ def binary(resolver):
 
 @debug
 def expression(resolver):
-    #
-    """
-    """
+    # type: (Parser) -> Parser
+    """Compiles expression."""
     parse_precedence(resolver, Precedence.PREC_ASSIGNMENT)
     return consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
 
@@ -301,6 +299,7 @@ def number(resolver):
     assert resolver.previous is not None
     assert resolver.previous.source is not None
     val = float(resolver.previous.source)
+
     return emit_constant(resolver, val)
 
 
@@ -321,7 +320,6 @@ def unary(resolver):
     return resolver
 
 
-@debug
 def parse_precedence(resolver, precedence):
     # type: (Parser, Precedence) -> None
     """Starts at current token and parses expression at given precedence level
@@ -347,7 +345,6 @@ def parse_precedence(resolver, precedence):
         infix_rule(resolver)
 
 
-@debug
 def get_rule(resolver, token_type):
     # type: (Parser, scanner.TokenType) -> ParseRule
     """Custom function to convert TokenType to ParseRule. This allows the
@@ -388,5 +385,4 @@ def compile(source, bytecode):
         resolver = expression(resolver)
 
     resolver = end_compiler(resolver)
-
     return not resolver.had_error
