@@ -159,5 +159,5 @@ def interpret(emulator, source):
     emulator.bytecode = bytecode
     result, constant = run(emulator)
 
-    free_vm(emulator)
+    bytecode = chunk.free_chunk(bytecode)
     return result, constant

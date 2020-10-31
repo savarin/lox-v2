@@ -145,11 +145,7 @@ def match(reader, expected):
     # type: (Scanner, Character) -> Tuple[Scanner, bool]
     """Checks if current character is the desired character."""
     assert reader.source is not None
-
-    if is_at_end(reader):
-        return reader, False
-
-    elif reader.source[reader.current] != expected:
+    if is_at_end(reader) or reader.source[reader.current] != expected:
         return reader, False
 
     reader.current += 1
@@ -185,6 +181,10 @@ def skip_whitespace(reader):
     # type: (Scanner) -> Scanner
     """Consumes every whitespace characters encountered."""
     while True:
+        # Check since not using EOF marker
+        if is_at_end(reader):
+            return reader
+
         character = peek(reader)
 
         if character in [" ", "\r", "\t"]:
@@ -193,7 +193,7 @@ def skip_whitespace(reader):
 
         elif character == "\n":
             reader.line += 1
-            reader, character = advance(reader)
+            reader, _ = advance(reader)
             continue
 
         elif character == "/":

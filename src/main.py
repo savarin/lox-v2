@@ -53,6 +53,8 @@ def main():
         print("Usage: clox [path]")
         exit_code(64)
 
+    emulator = vm.free_vm(emulator)
+
 
 if __name__ == "__main__":
     main()

@@ -148,6 +148,7 @@ def advance(resolver):
 
     while True:
         assert resolver.reader is not None
+
         current_token = scanner.scan_token(resolver.reader)
         resolver.current = current_token
 
