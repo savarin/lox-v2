@@ -1,5 +1,5 @@
 import enum
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import chunk
 import value
@@ -20,13 +20,13 @@ class VM():
         # type: () -> None
         """Stores bytecode and current instruction pointer."""
         self.bytecode = None  # type: Optional[chunk.Chunk]
-        self.ip = None  # type: Optional[int]
-        self.stack = None
-        self.stack_top = None
+        self.ip = 0
+        self.stack = None  # type: Optional[List]
+        self.stack_top = 0
 
 
 def reset_stack(emulator):
-    #
+    # type: (VM) -> VM
     """Reset VM by moving stack_top to point to beginning of array, thus
     indicating stack is empty."""
     emulator.stack = [None] * STACK_MAX
@@ -62,6 +62,8 @@ def pop(emulator):
     """Pop most recently pushed value."""
     assert emulator.stack_top is not None
     emulator.stack_top -= 1
+
+    assert emulator.stack is not None
     return emulator, emulator.stack[emulator.stack_top]
 
 
