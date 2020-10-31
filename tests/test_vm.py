@@ -35,79 +35,73 @@ def test_manual_init():
     emulator = vm.free_vm(emulator)
 
 
-def test_basic_add():
-    # type: () -> None
+def interpret(source, result, constant, opcode):
+    #
     emulator = vm.init_vm()
-    source = "1 + 1;"
+    result_tuple = vm.interpret(emulator, source, 0)
 
-    result, constant, opcode = vm.interpret(emulator, source, 0)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 2
-    assert opcode is None
+    assert result_tuple[0] == result
+    assert result_tuple[1] == constant
+    assert result_tuple[2] == opcode
 
     emulator = vm.free_vm(emulator)
+
+
+def test_basic_add():
+    # type: () -> None
+    interpret(
+        source="1 + 1;",
+        result=vm.InterpretResult.INTERPRET_OK,
+        constant=2,
+        opcode=None,
+    )
 
 
 def test_basic_subtract():
     # type: () -> None
-    emulator = vm.init_vm()
-    source = "2 - 1;"
-
-    result, constant, opcode = vm.interpret(emulator, source, 0)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 1
-    assert opcode is None
-
-    emulator = vm.free_vm(emulator)
+    interpret(
+        source="2 - 1;",
+        result=vm.InterpretResult.INTERPRET_OK,
+        constant=1,
+        opcode=None,
+    )
 
 
 def test_basic_multiply():
     # type: () -> None
-    emulator = vm.init_vm()
-    source = "3 * 3;"
-
-    result, constant, opcode = vm.interpret(emulator, source, 0)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 9
-    assert opcode is None
-
-    emulator = vm.free_vm(emulator)
+    interpret(
+        source="3 * 3;",
+        result=vm.InterpretResult.INTERPRET_OK,
+        constant=9,
+        opcode=None,
+    )
 
 
 def test_basic_divide():
     # type: () -> None
-    emulator = vm.init_vm()
-    source = "9 / 3;"
-
-    result, constant, opcode = vm.interpret(emulator, source, 0)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 3
-    assert opcode is None
-
-    emulator = vm.free_vm(emulator)
+    interpret(
+        source="9 / 3;",
+        result=vm.InterpretResult.INTERPRET_OK,
+        constant=3,
+        opcode=None,
+    )
 
 
 def test_basic_negate():
     # type: () -> None
-    emulator = vm.init_vm()
-    source = "-1;"
-
-    result, constant, opcode = vm.interpret(emulator, source, 0)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == -1
-    assert opcode is None
-
-    emulator = vm.free_vm(emulator)
+    interpret(
+        source="-1;",
+        result=vm.InterpretResult.INTERPRET_OK,
+        constant=-1,
+        opcode=None,
+    )
 
 
 def test_basic_print():
     # type: () -> None
-    emulator = vm.init_vm()
-    source = "print 1;"
-
-    result, constant, opcode = vm.interpret(emulator, source, 0)
-    assert result == vm.InterpretResult.INTERPRET_OK
-    assert constant == 1
-    assert opcode == chunk.OpCode.OP_PRINT
-
-    emulator = vm.free_vm(emulator)
+    interpret(
+        source="print 1;",
+        result=vm.InterpretResult.INTERPRET_OK,
+        constant=1,
+        opcode=chunk.OpCode.OP_PRINT,
+    )
