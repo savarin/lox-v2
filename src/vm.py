@@ -48,7 +48,8 @@ def free_vm(emulator):
     # type: (VM) -> VM
     """Deallocates memory in VM."""
     assert emulator.bytecode is not None
-    emulator.bytecode = chunk.free_chunk(emulator.bytecode)
+    if emulator.bytecode.code is not None:
+        emulator.bytecode = chunk.free_chunk(emulator.bytecode)
 
     emulator.ip = 0
     return reset_stack(emulator)

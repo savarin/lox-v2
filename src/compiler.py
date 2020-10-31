@@ -176,6 +176,25 @@ def consume(resolver, token_type, message):
 
 
 @debug
+def check(resolver, token_type):
+    #
+    """
+    """
+    return resolver.current.token_type == token_type
+
+
+@debug
+def match(resolver, token_type):
+    #
+    """
+    """
+    if not check(resolver, token_type):
+        return resolver, False
+
+    return advance(resolver), True
+
+
+@debug
 def emit_byte(resolver, byte):
     # type: (Parser, chunk.Byte) -> Parser
     """Append single byte to bytecode."""
@@ -264,6 +283,7 @@ def expression(resolver):
     """
     """
     parse_precedence(resolver, Precedence.PREC_ASSIGNMENT)
+    return consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
 
 
 @debug
@@ -359,8 +379,14 @@ def compile(source, bytecode):
 
     resolver = advance(resolver)
 
-    expression(resolver)
-    resolver = consume(resolver, scanner.TokenType.TOKEN_EOF, "Expect end of expression.")
+    while True:
+        resolver, condition = match(resolver, scanner.TokenType.TOKEN_EOF)
+
+        if condition:
+            break
+
+        resolver = expression(resolver)
+
     resolver = end_compiler(resolver)
 
     return not resolver.had_error
