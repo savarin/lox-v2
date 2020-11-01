@@ -136,8 +136,7 @@ def error_at(searcher, processor, token, message):
         token_start = token.start
         token_end = token_start + token.length
 
-        # assert processor.searcher is not None
-        # assert processor.searcher.source is not None
+        assert searcher.source is not None
         current_token = searcher.source[token_start:token_end]
         print("at {}".format(current_token))
 
@@ -185,7 +184,7 @@ def advance(searcher, processor):
 def consume(searcher, processor, token_type, message):
     # type: (scanner.Scanner, Parser, scanner.TokenType, str) -> Parser
     """Reads the next token and validates token has expected type."""
-    # assert processor.current is not None
+    assert processor.current is not None
     if processor.current.token_type == token_type:
         return advance(searcher, processor)
 
@@ -195,7 +194,7 @@ def consume(searcher, processor, token_type, message):
 def check(processor, token_type):
     # type: (Parser, scanner.TokenType) -> bool
     """Checks current_token has given type."""
-    # assert processor.current is not None
+    assert processor.current is not None
     return processor.current.token_type == token_type
 
 
@@ -211,10 +210,9 @@ def match(searcher, processor, token_type):
 
 @expose
 def emit_byte(bytecode, processor, byte):
-    # type: (chunk.Chunk, Parser, chunk.Byte) -> Parser
+    # type: (chunk.Chunk, Parser, chunk.Byte) -> Tuple[chunk.Chunk, Parser]
     """Append single byte to bytecode."""
-    # assert processor.bytecode is not None
-    # assert processor.previous is not None
+    assert processor.previous is not None
     bytecode = chunk.write_chunk(bytecode, byte, processor.previous.line)
 
     return bytecode, processor
@@ -265,38 +263,38 @@ def end_compiler(bytecode, processor):
     return emit_return(bytecode, processor)
 
 
-def begin_scope(processor):
-    # type: (Parser) -> Parser
-    """
-    """
-    # assert processor.composer is not None
-    processor.composer.scope_depth += 1
+# def begin_scope(composer):
+#     # type: (Compiler) -> Compiler
+#     """
+#     """
+#     # assert processor.composer is not None
+#     composer.scope_depth += 1
 
-    return processor
+#     return composer
 
 
-def end_scope(bytecode, processor):
-    # type: (chunk.Chunk, Parser) -> Parser
-    """
-    """
-    # assert processor.composer is not None
-    processor.composer.scope_depth -= 1
+# def end_scope(bytecode, processor):
+#     # type: (chunk.Chunk, Parser) -> Parser
+#     """
+#     """
+#     assert processor.composer is not None
+#     processor.composer.scope_depth -= 1
 
-    while True:
-        is_positive = processor.composer.local_count > 0
+#     while True:
+#         is_positive = processor.composer.local_count > 0
 
-        depth = processor.composer.locals[processor.composer.local_count - 1].depth
-        is_over_scope = depth > processor.composer.scope_depth
+#         depth = processor.composer.locals[processor.composer.local_count - 1].depth
+#         is_over_scope = depth > processor.composer.scope_depth
 
-        if not is_positive or not is_over_scope:
-            break
+#         if not is_positive or not is_over_scope:
+#             break
 
-        bytecode, processor = emit_byte(bytecode, processor, chunk.OpCode.OP_POP)
+#         bytecode, processor = emit_byte(bytecode, processor, chunk.OpCode.OP_POP)
 
-        # assert processor.composer is not None
-        processor.composer.local_count -= 1
+#         # assert processor.composer is not None
+#         processor.composer.local_count -= 1
 
-    return processor
+#     return processor
 
 
 @expose
@@ -304,7 +302,7 @@ def binary(bytecode, searcher, processor):
     # type: (chunk.Chunk, scanner.Scanner, Parser) -> Parser
     """Implements infix parser for binary operations."""
     # Remember the operator
-    # assert processor.previous is not None
+    assert processor.previous is not None
     operator_type = processor.previous.token_type
 
     # Compile the right operand.
@@ -332,25 +330,25 @@ def expression(bytecode, searcher, processor):
     parse_precedence(bytecode, searcher, processor, Precedence.PREC_ASSIGNMENT)
 
 
-def block(searcher, processor):
-    # type: (Parser) -> Parser
-    """
-    """
-    while True:
-        is_right_brace = check(processor, scanner.TokenType.TOKEN_RIGHT_BRACE)
-        is_eof = check(processor, scanner.TokenType.TOKEN_EOF)
+# def block(searcher, processor):
+#     # type: (Parser) -> Parser
+#     """
+#     """
+#     while True:
+#         is_right_brace = check(processor, scanner.TokenType.TOKEN_RIGHT_BRACE)
+#         is_eof = check(processor, scanner.TokenType.TOKEN_EOF)
 
-        if is_right_brace or is_eof:
-            break
+#         if is_right_brace or is_eof:
+#             break
 
-        processor = declaration(processor)
+#         processor = declaration(processor)
 
-    return consume(
-        searcher,
-        processor,
-        scanner.TokenType.TOKEN_RIGHT_BRACE,
-        "Expect '}' after block.",
-    )
+#     return consume(
+#         searcher,
+#         processor,
+#         scanner.TokenType.TOKEN_RIGHT_BRACE,
+#         "Expect '}' after block.",
+#     )
 
 
 @expose
@@ -392,8 +390,8 @@ def synchronize(processor):
     to be exposed, instead of stopping after the first one."""
     processor.panic_mode = False
 
-    # assert processor.current is not None
-    # assert processor.previous is not None
+    assert processor.current is not None
+    assert processor.previous is not None
 
     while processor.current.token_type != scanner.TokenType.TOKEN_EOF:
         if processor.previous.token_type == scanner.TokenType.TOKEN_SEMICOLON:
@@ -428,12 +426,12 @@ def statement(bytecode, searcher, processor):
     if condition:
         return print_statement(bytecode, searcher, processor)
 
-    processor, condition = match(searcher, processor, scanner.TokenType.TOKEN_LEFT_BRACE)
+    # processor, condition = match(searcher, processor, scanner.TokenType.TOKEN_LEFT_BRACE)
 
-    if condition:
-        processor = begin_scope(processor)
-        processor = block(processor)
-        processor = end_scope(processor)
+    # if condition:
+    #     processor = begin_scope(processor)
+    #     processor = block(processor)
+    #     processor = end_scope(processor)
 
     return expression_statement(bytecode, searcher, processor)
 
@@ -456,8 +454,8 @@ def grouping(bytecode, searcher, processor):
 def number(bytecode, searcher, processor):
     # type: (chunk.Chunk, scanner.Scanner, Parser) -> Parser
     """Append number literal to bytecode."""
-    # assert processor.previous is not None
-    # assert processor.previous.source is not None
+    assert processor.previous is not None
+    assert processor.previous.source is not None
     val = float(processor.previous.source)
 
     return emit_constant(bytecode, searcher, processor, val)
@@ -486,7 +484,7 @@ def parse_precedence(bytecode, searcher, processor, precedence):
     or higher."""
     processor = advance(searcher, processor)
 
-    # assert processor.previous is not None
+    assert processor.previous is not None
     prefix_rule = get_rule(processor.previous.token_type).prefix
 
     if prefix_rule is None:
@@ -495,11 +493,11 @@ def parse_precedence(bytecode, searcher, processor, precedence):
 
     prefix_rule(bytecode, searcher, processor)
 
-    # assert processor.current is not None
+    assert processor.current is not None
     while precedence.value <= get_rule(processor.current.token_type).precedence.value:
         processor = advance(searcher, processor)
 
-        # assert processor.previous is not None
+        assert processor.previous is not None
         infix_rule = get_rule(processor.previous.token_type).infix
 
         infix_rule(bytecode, searcher, processor)
@@ -524,73 +522,73 @@ def identifiers_equal(a, b):
     return a.source == b.source
 
 
-def add_local(processor, name):
-    # type: (Parser, scanner.Token) -> Parser
-    """
-    """
-    # assert processor.composer is not None
-    if processor.composer.local_count == UINT8_COUNT:
-        error(processor, "Too many local variables in function.")
-        return processor
+# def add_local(processor, name):
+#     # type: (Parser, scanner.Token) -> Parser
+#     """
+#     """
+#     # assert processor.composer is not None
+#     if processor.composer.local_count == UINT8_COUNT:
+#         error(processor, "Too many local variables in function.")
+#         return processor
 
-    local = processor.composer.locals[processor.composer.local_count]
-    processor.composer.local_count += 1
+#     local = processor.composer.locals[processor.composer.local_count]
+#     processor.composer.local_count += 1
 
-    local.name = name
-    local.depth = -1
+#     local.name = name
+#     local.depth = -1
 
-    return processor
-
-
-def declare_variable(processor):
-    # type: (Parser) -> Parser
-    """
-    """
-    # assert processor.composer is not None
-    if processor.composer.scope_depth == 0:
-        return processor
-
-    name = processor.previous
-
-    for i in range(processor.composer.local_count - 1, -1, -1):
-        local = processor.composer.locals[i]
-
-        if local.depth != -1 and local.depth < processor.composer.scope_depth:
-            break
-
-        if identifiers_equal(name, local.name):
-            return error(processor, "Variable with this name already declared in this scope.")
-
-    # assert name is not None
-    return add_local(processor, name)
+#     return processor
 
 
-def parse_variable(processor, error_message):
-    # type: (Parser, str) -> Tuple[Parser, int]
-    """
-    """
-    processor = consume(processor, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
-    processor = declare_variable(processor)
+# def declare_variable(processor):
+#     # type: (Parser) -> Parser
+#     """
+#     """
+#     # assert processor.composer is not None
+#     if processor.composer.scope_depth == 0:
+#         return processor
 
-    # assert processor.composer is not None
-    if processor.composer.scope_depth > 0:
-        return processor, 0
+#     name = processor.previous
 
-    # assert processor.previous is not None
-    return identifier_constant(processor, processor.previous)
+#     for i in range(processor.composer.local_count - 1, -1, -1):
+#         local = processor.composer.locals[i]
+
+#         if local.depth != -1 and local.depth < processor.composer.scope_depth:
+#             break
+
+#         if identifiers_equal(name, local.name):
+#             return error(processor, "Variable with this name already declared in this scope.")
+
+#     # assert name is not None
+#     return add_local(processor, name)
 
 
-def define_variable(processor):
-    # type: (Parser) -> Parser
-    """
-    """
-    breakpoint()
+# def parse_variable(processor, error_message):
+#     # type: (Parser, str) -> Tuple[Parser, int]
+#     """
+#     """
+#     processor = consume(processor, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
+#     processor = declare_variable(processor)
 
-    # assert processor.composer is not None
-    if processor.composer.scope_depth > 0:
-        return processor
+#     # assert processor.composer is not None
+#     if processor.composer.scope_depth > 0:
+#         return processor, 0
 
-    return processor
+#     # assert processor.previous is not None
+#     return identifier_constant(processor, processor.previous)
+
+
+# def define_variable(processor):
+#     # type: (Parser) -> Parser
+#     """
+#     """
+#     breakpoint()
+
+#     # assert processor.composer is not None
+#     if processor.composer.scope_depth > 0:
+#         return processor
+
+#     return processor
 
 
 def get_rule(token_type):
@@ -607,7 +605,7 @@ def get_rule(token_type):
 
     rule = rule_map[token_type.name]
 
-    # assert rule[2] is not None
+    assert rule[2] is not None
     return ParseRule(
         prefix=None if rule[0] is None else type_map[rule[0]],
         infix=None if rule[1] is None else type_map[rule[1]],
@@ -638,7 +636,6 @@ def compile(source, bytecode, debug_level):
     bytecode, processor = end_compiler(bytecode, processor)
 
     if debug_level >= 1:
-        # assert processor.bytecode is not None
-        debug.disassemble_chunk(processor.bytecode, "script")
+        debug.disassemble_chunk(bytecode, "script")
 
     return not processor.had_error
