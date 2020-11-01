@@ -104,6 +104,7 @@ class Parser():
         # type: () -> None
         """Stores scanner and instructions."""
         self.searcher = None  # type: Optional[scanner.Scanner]
+        self.composer = None
         self.bytecode = None  # type: Optional[chunk.Chunk]
         self.current = None  # type: Optional[scanner.Token]
         self.previous = None  # type: Optional[scanner.Token]
@@ -112,11 +113,12 @@ class Parser():
         self.debug_level = 0
 
 
-def init_parser(searcher, bytecode, debug_level):
-    # type: (scanner.Scanner, chunk.Chunk, int) -> Parser
+def init_parser(searcher, bytecode, composer, debug_level):
+    # type: (scanner.Scanner, Compiler, chunk.Chunk, int) -> Parser
     """Initialize new parser."""
     processor = Parser()
     processor.searcher = searcher
+    processor.composer = composer
     processor.bytecode = bytecode
     processor.debug_level = debug_level
 
@@ -273,6 +275,22 @@ def end_compiler(processor):
     return emit_return(processor)
 
 
+def begin_scope(processor):
+    #
+    """
+    """
+    processor.composer.scope_depth += 1
+    return processor
+
+
+def end_scope(processor):
+    #
+    """
+    """
+    processor.composer.scope_depth -= 1
+    return processor
+
+
 @expose
 def binary(processor):
     # type: (Parser) -> Parser
@@ -304,6 +322,22 @@ def expression(processor):
     # type: (Parser) -> None
     """Compiles expression."""
     parse_precedence(processor, Precedence.PREC_ASSIGNMENT)
+
+
+def block(processor):
+    #
+    """
+    """
+    while True:
+        is_right_brace = check(processor, scanner.TokenType.TOKEN_RIGHT_BRACE)
+        is_eof = check(processor, scanner.TokenType.TOKEN_EOF)
+
+        if is_right_brace or is_eof:
+            break
+
+        processor = declaration(processor)
+
+    return consume(processor, scanner.TokenType.TOKEN_RIGHT_BRACE, "Expect '}' after block.")
 
 
 @expose
@@ -378,6 +412,13 @@ def statement(processor):
 
     if condition:
         return print_statement(processor)
+
+    processor, condition = match(processor, scanner.TokenType.TOKEN_LEFT_BRACE)
+
+    if condition:
+        processor = begin_scope(processor)
+        processor = block(processor)
+        processor = end_scope(processor)
 
     return expression_statement(processor)
 
@@ -469,7 +510,8 @@ def compile(source, bytecode, debug_level):
     # type: (scanner.Source, chunk.Chunk, int) -> bool
     """Compiles source code into tokens."""
     searcher = scanner.init_scanner(source)
-    processor = init_parser(searcher, bytecode, debug_level)
+    composer = init_compiler()
+    processor = init_parser(searcher, composer, bytecode, debug_level)
 
     if debug_level >= 2:
         print("\n== tokens ==")
