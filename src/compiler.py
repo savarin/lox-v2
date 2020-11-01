@@ -556,25 +556,6 @@ def parse_precedence(processor, searcher, composer, bytecode, precedence):
     return processor, bytecode
 
 
-# @expose
-# def identifier_constant(processor, searcher, bytecode, token):
-#     # type: (Parser, scanner.Scanner, chunk.Chunk, scanner.Token) -> Tuple[Parser, Optional[value.Value]]
-#     """
-#     """
-#     val = token.source[token.start:token.start + token.length]
-#     return make_constant(processor, searcher, bytecode, val)
-
-
-    # @expose
-    # def identifier_constant(self, name):
-    #     #
-    #     """
-    #     """
-    #     chars = name.source[:name.length]
-    #     obj_val = value.obj_val(value.copy_string(chars, name.length))
-    #     return self.make_constant(obj_val)
-
-
 def identifiers_equal(a, b):
     #
     """
