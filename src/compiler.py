@@ -288,6 +288,19 @@ def end_scope(processor):
     """
     """
     processor.composer.scope_depth -= 1
+
+    while True:
+        is_positive = processor.composer.local_count > 0
+
+        depth = processor.composer.locals[processor.composer.local_count - 1].depth
+        is_over_depth = depth > processor.composer.scope_depth
+
+        if not is_positive or not is_over_depth:
+            break
+
+        processor = emit_byte(processor, chunk.OpCode.OP_POP)
+        processor.composer.local_count -= 1
+
     return processor
 
 
@@ -482,6 +495,84 @@ def parse_precedence(processor, precedence):
         infix_rule = get_rule(processor, processor.previous.token_type).infix
 
         infix_rule(processor)
+
+
+def identifier_constant(name):
+    #
+    """
+    """
+    pass
+
+
+def identifiers_equal(a, b):
+    #
+    """
+    """
+    if not a or not b or a.length != b.length:
+        return False
+
+    return a.source == b.source
+
+
+def add_local(processor, name):
+    #
+    """
+    """
+    if processor.composer.local_count == UINT8_COUNT:
+        error(processor, "Too many local variables in function.")
+        return processor
+
+    local = processor.composer.locals[processor.composer.local_count]
+    processor.composer.local_count += 1
+
+    local.name = name
+    local.depth = -1
+
+    return processor
+
+
+def declare_variable(processor):
+    #
+    """
+    """
+    if processor.composer.scope_depth == 0:
+        return None
+
+    name = processor.previous
+
+    for i in range(processor.composer.local_count - 1, -1, -1):
+        local = processor.composer.locals[i]
+
+        if local.depth != -1 and local.depth < processor.composer.scope_depth:
+            break
+
+        if identifiers_equal(name, local.name):
+            error(processor, "Variable with this name already declared in this scope.")
+
+    add_local(name)
+
+
+def parse_variable(processor, error_message):
+    #
+    """
+    """
+    processor = consume(processor, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
+
+    declare_variable()
+
+    if processor.composer.scope_depth > 0:
+        return 0
+
+    # return identifier_constant(processor.previous)
+    return processor
+
+
+def define_variable():
+    #
+    """
+    """
+    if processor.composer.scope_depth > 0:
+        return None
 
 
 def get_rule(processor, token_type):
