@@ -75,11 +75,11 @@ class Scanner():
 def init_scanner(source):
     # type: (Source) -> Scanner
     """Initialize new scanner."""
-    reader = Scanner()
-    reader.source = source
-    reader.line = 1
+    searcher = Scanner()
+    searcher.source = source
+    searcher.line = 1
 
-    return reader
+    return searcher
 
 
 def is_alpha(character):
@@ -98,61 +98,61 @@ def is_digit(character):
     return character >= "0" and character <= "9"
 
 
-def is_at_end(reader):
+def is_at_end(searcher):
     # type: (Scanner) -> bool
     """Checks if scanner at the end of the source code."""
-    assert reader.source is not None
-    return reader.current == len(reader.source)
+    assert searcher.source is not None
+    return searcher.current == len(searcher.source)
 
 
-def advance(reader):
+def advance(searcher):
     # type: (Scanner) -> Tuple[Scanner, Character]
     """Consumes and returns current character."""
-    reader.current += 1
+    searcher.current += 1
 
-    assert reader.source is not None
-    return reader, reader.source[reader.current - 1]
+    assert searcher.source is not None
+    return searcher, searcher.source[searcher.current - 1]
 
 
-def peek(reader):
+def peek(searcher):
     # type: (Scanner) -> Character
     """Returns the current character without consuming it."""
-    assert reader.source is not None
-    return reader.source[reader.current]
+    assert searcher.source is not None
+    return searcher.source[searcher.current]
 
 
-def peek_next(reader):
+def peek_next(searcher):
     # type: (Scanner) -> Character
     """Returns the character past the current character without consuming it."""
-    assert reader.source is not None
-    return reader.source[reader.current + 1]
+    assert searcher.source is not None
+    return searcher.source[searcher.current + 1]
 
 
-def match(reader, expected):
+def match(searcher, expected):
     # type: (Scanner, Character) -> Tuple[Scanner, bool]
     """Checks if current character is the desired character."""
-    assert reader.source is not None
-    if is_at_end(reader) or reader.source[reader.current] != expected:
-        return reader, False
+    assert searcher.source is not None
+    if is_at_end(searcher) or searcher.source[searcher.current] != expected:
+        return searcher, False
 
-    reader.current += 1
-    return reader, True
+    searcher.current += 1
+    return searcher, True
 
 
-def make_token(reader, token_type):
+def make_token(searcher, token_type):
     # type: (Scanner, TokenType) -> Token
     """Constructor-like function to create tokens."""
-    assert reader.source is not None
+    assert searcher.source is not None
     return Token(
         token_type=token_type,
-        start=reader.start,
-        length=reader.current - reader.start,
-        source=reader.source[reader.start:reader.current],
-        line=reader.line,
+        start=searcher.start,
+        length=searcher.current - searcher.start,
+        source=searcher.source[searcher.start:searcher.current],
+        line=searcher.line,
     )
 
 
-def error_token(reader, message):
+def error_token(searcher, message):
     # type: (Scanner, str) -> Token
     """Returns error tokens with error message."""
     return Token(
@@ -160,49 +160,49 @@ def error_token(reader, message):
         start=0,
         length=len(message),
         source=None,
-        line=reader.line,
+        line=searcher.line,
     )
 
 
-def skip_whitespace(reader):
+def skip_whitespace(searcher):
     # type: (Scanner) -> Scanner
     """Consumes every whitespace characters encountered."""
     while True:
         # Check since not using EOF marker
-        if is_at_end(reader):
-            return reader
+        if is_at_end(searcher):
+            return searcher
 
-        character = peek(reader)
+        character = peek(searcher)
 
         if character in [" ", "\r", "\t"]:
-            reader, _ = advance(reader)
+            searcher, _ = advance(searcher)
             continue
 
         elif character == "\n":
-            reader.line += 1
-            reader, _ = advance(reader)
+            searcher.line += 1
+            searcher, _ = advance(searcher)
             continue
 
         elif character == "/":
-            if peek_next(reader) == "/":
-                while peek(reader) != "\n" and not is_at_end(reader):
-                    reader, _ = advance(reader)
+            if peek_next(searcher) == "/":
+                while peek(searcher) != "\n" and not is_at_end(searcher):
+                    searcher, _ = advance(searcher)
                 continue
             else:
-                return reader
+                return searcher
 
-        return reader
+        return searcher
 
 
-def check_keyword(reader, start, length, rest, token_type):
+def check_keyword(searcher, start, length, rest, token_type):
     # type: (Scanner, int, int, str, TokenType) -> TokenType
     """Utility function to check full keyword matches."""
-    index_start = reader.start + start
+    index_start = searcher.start + start
     index_end = index_start + length
 
-    assert reader.source is not None
-    is_correct_length = reader.current - reader.start == start + length
-    is_actual_match = reader.source[index_start:index_end] == rest
+    assert searcher.source is not None
+    is_correct_length = searcher.current - searcher.start == start + length
+    is_actual_match = searcher.source[index_start:index_end] == rest
 
     if is_correct_length and is_actual_match:
         return token_type
@@ -210,76 +210,76 @@ def check_keyword(reader, start, length, rest, token_type):
     return TokenType.TOKEN_IDENTIFIER
 
 
-def identifier_type(reader):
+def identifier_type(searcher):
     # type: (Scanner) -> TokenType
     """Checks identifier keywords and returns identifier token type."""
-    assert reader.source is not None
-    character = reader.source[reader.start]
+    assert searcher.source is not None
+    character = searcher.source[searcher.start]
 
     if character == "f":
-        return check_keyword(reader, 1, 2, "un", TokenType.TOKEN_FUN)
+        return check_keyword(searcher, 1, 2, "un", TokenType.TOKEN_FUN)
     elif character == "l":
-        return check_keyword(reader, 1, 2, "et", TokenType.TOKEN_LET)
+        return check_keyword(searcher, 1, 2, "et", TokenType.TOKEN_LET)
     elif character == "p":
-        return check_keyword(reader, 1, 4, "rint", TokenType.TOKEN_PRINT)
+        return check_keyword(searcher, 1, 4, "rint", TokenType.TOKEN_PRINT)
     elif character == "r":
-        return check_keyword(reader, 1, 5, "eturn", TokenType.TOKEN_RETURN)
+        return check_keyword(searcher, 1, 5, "eturn", TokenType.TOKEN_RETURN)
 
     return TokenType.TOKEN_IDENTIFIER
 
 
-def identifier(reader):
+def identifier(searcher):
     # type: (Scanner) -> Token
     """Converts identifier into token."""
-    while is_alpha(peek(reader)) or is_digit(peek(reader)):
-        reader, _ = advance(reader)
+    while is_alpha(peek(searcher)) or is_digit(peek(searcher)):
+        searcher, _ = advance(searcher)
 
-    return make_token(reader, identifier_type(reader))
+    return make_token(searcher, identifier_type(searcher))
 
 
-def number(reader):
+def number(searcher):
     # type: (Scanner) -> Token
     """Convert number into token."""
-    while is_digit(peek(reader)):
-        reader, _ = advance(reader)
+    while is_digit(peek(searcher)):
+        searcher, _ = advance(searcher)
 
     # Look for a fractional part
-    if peek(reader) == "." and is_digit(peek_next(reader)):
+    if peek(searcher) == "." and is_digit(peek_next(searcher)):
         # Consume the period
-        reader, _ = advance(reader)
+        searcher, _ = advance(searcher)
 
-        while is_digit(peek(reader)):
-            reader, _ = advance(reader)
+        while is_digit(peek(searcher)):
+            searcher, _ = advance(searcher)
 
-    return make_token(reader, TokenType.TOKEN_NUMBER)
+    return make_token(searcher, TokenType.TOKEN_NUMBER)
 
 
-def scan_token(reader):
+def scan_token(searcher):
     # type: (Scanner) -> Token
     """Parses through source code and converts into tokens."""
-    reader = skip_whitespace(reader)
-    reader.start = reader.current
+    searcher = skip_whitespace(searcher)
+    searcher.start = searcher.current
 
-    if is_at_end(reader):
-        return make_token(reader, TokenType.TOKEN_EOF)
+    if is_at_end(searcher):
+        return make_token(searcher, TokenType.TOKEN_EOF)
 
-    reader, character = advance(reader)
+    searcher, character = advance(searcher)
 
     if is_alpha(character):
-        return identifier(reader)
+        return identifier(searcher)
 
     if is_digit(character):
-        return number(reader)
+        return number(searcher)
 
     if character in single_token_map:
-        return make_token(reader, single_token_map[character])
+        return make_token(searcher, single_token_map[character])
 
     elif character in double_token_map:
-        reader, condition = match(reader, "=")
+        searcher, condition = match(searcher, "=")
 
         if condition:
-            return make_token(reader, double_token_map[character][0])
+            return make_token(searcher, double_token_map[character][0])
         else:
-            return make_token(reader, double_token_map[character][1])
+            return make_token(searcher, double_token_map[character][1])
 
-    return error_token(reader, "Unexpected character.")
+    return error_token(searcher, "Unexpected character.")

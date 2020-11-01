@@ -73,7 +73,7 @@ class Parser():
     def __init__(self):
         # type: () -> None
         """Stores scanner and instructions."""
-        self.reader = None  # type: Optional[scanner.Scanner]
+        self.searcher = None  # type: Optional[scanner.Scanner]
         self.bytecode = None  # type: Optional[chunk.Chunk]
         self.current = None  # type: Optional[scanner.Token]
         self.previous = None  # type: Optional[scanner.Token]
@@ -82,11 +82,11 @@ class Parser():
         self.debug_level = 0
 
 
-def init_parser(reader, bytecode, debug_level):
+def init_parser(searcher, bytecode, debug_level):
     # type: (scanner.Scanner, chunk.Chunk, int) -> Parser
     """Initialize new parser."""
     processor = Parser()
-    processor.reader = reader
+    processor.searcher = searcher
     processor.bytecode = bytecode
     processor.debug_level = debug_level
 
@@ -112,9 +112,9 @@ def error_at(processor, token, message):
         token_start = token.start
         token_end = token_start + token.length
 
-        assert processor.reader is not None
-        assert processor.reader.source is not None
-        current_token = processor.reader.source[token_start:token_end]
+        assert processor.searcher is not None
+        assert processor.searcher.source is not None
+        current_token = processor.searcher.source[token_start:token_end]
         print("at {}".format(current_token))
 
     return processor
@@ -143,9 +143,9 @@ def advance(processor):
     processor.previous = processor.current
 
     while True:
-        assert processor.reader is not None
+        assert processor.searcher is not None
 
-        current_token = scanner.scan_token(processor.reader)
+        current_token = scanner.scan_token(processor.searcher)
         processor.current = current_token
 
         if processor.debug_level >= 2 and current_token.token_type:
@@ -438,8 +438,8 @@ def get_rule(processor, token_type):
 def compile(source, bytecode, debug_level):
     # type: (scanner.Source, chunk.Chunk, int) -> bool
     """Compiles source code into tokens."""
-    reader = scanner.init_scanner(source)
-    processor = init_parser(reader, bytecode, debug_level)
+    searcher = scanner.init_scanner(source)
+    processor = init_parser(searcher, bytecode, debug_level)
 
     if debug_level >= 2:
         print("\n== tokens ==")
