@@ -278,9 +278,8 @@ def expression(resolver):
 
 @expose
 def expression_statement(resolver):
-    #
-    """
-    """
+    # type: (Parser) -> Parser
+    """Evaluates expression statement prior to semicolon."""
     expression(resolver)
     resolver = consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
     return emit_byte(resolver, chunk.OpCode.OP_POP)
@@ -288,27 +287,51 @@ def expression_statement(resolver):
 
 @expose
 def print_statement(resolver):
-    #
-    """
-    """
+    # type: (Parser) -> Parser
+    """Evaluates expression and prints result."""
     expression(resolver)
     resolver = consume(resolver, scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after expression.")
     return emit_byte(resolver, chunk.OpCode.OP_PRINT)
 
 
 @expose
+def synchronize(resolver):
+    # type: (Parser) -> Parser
+    """Skip tokens until statement boundary reached. This allows multiple errors
+    to be exposed, instead of stopping after the first one."""
+    resolver.panic_mode = False
+
+    assert resolver.current is not None
+    assert resolver.previous is not None
+
+    while resolver.current.token_type != scanner.TokenType.TOKEN_EOF:
+        if resolver.previous.token_type == scanner.TokenType.TOKEN_SEMICOLON:
+            break
+
+        elif resolver.current.token_type == scanner.TokenType.TOKEN_RETURN:
+            break
+
+        resolver = advance(resolver)
+
+    return resolver
+
+
+@expose
 def declaration(resolver):
-    #
-    """
-    """
-    return statement(resolver)
+    # type: (Parser) -> Parser
+    """Compiles declarations until end of source code reached."""
+    resolver = statement(resolver)
+
+    if resolver.panic_mode:
+        return synchronize(resolver)
+
+    return resolver
 
 
 @expose
 def statement(resolver):
-    #
-    """
-    """
+    # type: (Parser) -> Parser
+    """Handler for statements."""
     resolver, condition = match(resolver, scanner.TokenType.TOKEN_PRINT)
 
     if condition:
