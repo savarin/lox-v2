@@ -27,9 +27,9 @@ class TokenType(enum.Enum):
 
     # Keywords
     TOKEN_FUN = "TOKEN_FUN"
-    TOKEN_LET = "TOKEN_LET"
     TOKEN_PRINT = "TOKEN_PRINT"
     TOKEN_RETURN = "TOKEN_RETURN"
+    TOKEN_VAR = "TOKEN_VAR"
     TOKEN_ERROR = "TOKEN_ERROR"
     TOKEN_EOF = "TOKEN_EOF"
 
@@ -219,7 +219,7 @@ def identifier_type(searcher):
     if character == "f":
         return check_keyword(searcher, 1, 2, "un", TokenType.TOKEN_FUN)
     elif character == "l":
-        return check_keyword(searcher, 1, 2, "et", TokenType.TOKEN_LET)
+        return check_keyword(searcher, 1, 2, "et", TokenType.TOKEN_VAR)
     elif character == "p":
         return check_keyword(searcher, 1, 4, "rint", TokenType.TOKEN_PRINT)
     elif character == "r":

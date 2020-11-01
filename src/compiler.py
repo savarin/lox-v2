@@ -40,9 +40,9 @@ rule_map = {
     "TOKEN_IDENTIFIER":    ["variable", None,     "PREC_NONE"],
     "TOKEN_NUMBER":        ["number",   None,     "PREC_NONE"],
     "TOKEN_FUN":           [None,       None,     "PREC_NONE"],
-    "TOKEN_LET":           [None,       None,     "PREC_NONE"],
     "TOKEN_PRINT":         [None,       None,     "PREC_NONE"],
     "TOKEN_RETURN":        [None,       None,     "PREC_NONE"],
+    "TOKEN_VAR":           [None,       None,     "PREC_NONE"],
     "TOKEN_ERROR":         [None,       None,     "PREC_NONE"],
     "TOKEN_EOF":           [None,       None,     "PREC_NONE"],
 }  # type: Dict[str, List[Optional[str]]]
@@ -76,7 +76,7 @@ class Local():
         """
         """
         self.name = None
-        self.depth = None
+        self.depth = 0
 
 
 class Compiler():
@@ -95,6 +95,7 @@ def init_compiler():
     """
     composer = Compiler()
     composer.locals = [Local() for _ in range(UINT8_COUNT)]
+    composer.local_count = 1
 
     return composer
 
@@ -325,9 +326,47 @@ def expression(processor, searcher, composer, bytecode):
     return parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_ASSIGNMENT)
 
 
+def variable_declaration(processor, searcher, composer, bytecode):
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
+    """
+    """
+    processor, _ = parse_variable(processor, searcher, composer, bytecode, "Expect variable name.")
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
+
+    assert condition
+    processor, bytecode = expression(processor, searcher, composer, bytecode)
+
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_SEMICOLON,
+        "Expect ';' after variable declaration.",
+    )
+
+    composer = define_variable(processor, composer)
+
+    return processor, composer, bytecode
+
+
+    # def var_declaration(self):
+    #     #
+    #     """
+    #     """
+    #     global_var = self.parse_variable("Expect variable name.")
+
+    #     if self.match(scanner.TokenType.TOKEN_EQUAL):
+    #         self.expression()
+    #     else:
+    #         self.emit_byte(chunk.OpCode.OP_NIL)
+
+    #     self.consume(scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after variable declaration")
+
+    #     self.define_variable(global_var)
+
+
 @expose
 def block(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Parser
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """
     """
     while True:
@@ -337,14 +376,16 @@ def block(processor, searcher, composer, bytecode):
         if is_right_brace or is_eof:
             break
 
-        processor = declaration(processor, searcher, composer, bytecode)
+        processor, composer, bytecode = declaration(processor, searcher, composer, bytecode)
 
-    return consume(
+    processor = consume(
         processor,
         searcher,
         scanner.TokenType.TOKEN_RIGHT_BRACE,
         "Expect '}' after block.",
     )
+
+    return processor, composer, bytecode
 
 
 @expose
@@ -403,14 +444,24 @@ def synchronize(processor, searcher):
 
 @expose
 def declaration(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Parser
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """Compiles declarations until end of source code reached."""
-    processor, composer, bytecode = statement(processor, searcher, composer, bytecode)
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_VAR)
+
+    if condition:
+        processor, composer, bytecode = variable_declaration(
+            processor,
+            searcher,
+            composer,
+            bytecode,
+        )
+    else:
+        processor, composer, bytecode = statement(processor, searcher, composer, bytecode)
 
     if processor.panic_mode:
         return synchronize(processor, searcher)
 
-    return processor
+    return processor, composer, bytecode
 
 
 @expose
@@ -427,7 +478,7 @@ def statement(processor, searcher, composer, bytecode):
 
     if condition:
         composer = begin_scope(processor, composer)
-        processor = block(processor, searcher, composer, bytecode)
+        processor, composer, bytecode = block(processor, searcher, composer, bytecode)
         processor, composer, bytecode = end_scope(processor, composer, bytecode)
 
     processor, bytecode = expression_statement(processor, searcher, composer, bytecode)
@@ -464,7 +515,7 @@ def named_variable(processor, searcher, composer, bytecode, token):
     #
     """
     """
-    arg = resolve_local(processor, searcher, composer, token)
+    processor, arg = resolve_local(processor, searcher, composer, token)
 
     if match(processor, searcher, scanner.TokenType.TOKEN_EQUAL):
         processor, bytecode = expression(processor, searcher, composer, bytecode)
@@ -519,7 +570,13 @@ def unary(processor, searcher, composer, bytecode):
     operator_type = processor.previous.token_type
 
     # Compile the operand
-    processor, bytecode = parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_UNARY)
+    processor, bytecode = parse_precedence(
+        processor,
+        searcher,
+        composer,
+        bytecode,
+        Precedence.PREC_UNARY,
+    )
 
     # Emit the operator instruction
     if operator_type == scanner.TokenType.TOKEN_MINUS:
@@ -567,8 +624,28 @@ def identifiers_equal(a, b):
 
 
 @expose
+def identifier_constant(processor, searcher, bytecode, token):
+    # type: (Parser, scanner.Scanner, chunk.Chunk, scanner.Token) -> Tuple[Parser, Optional[value.Value]]
+    """
+    """
+    assert token.source is not None
+    val = token.source[token.start:token.start + token.length]
+    return make_constant(processor, searcher, bytecode, val)
+
+
+    # @expose
+    # def identifier_constant(self, name):
+    #     #
+    #     """
+    #     """
+    #     chars = name.source[:name.length]
+    #     obj_val = value.obj_val(value.copy_string(chars, name.length))
+    #     return self.make_constant(obj_val)
+
+
+@expose
 def resolve_local(processor, searcher, composer, token):
-    #
+    # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, int]
     """
     """
     for i in range(composer.local_count - 1, -1, -1):
@@ -576,11 +653,15 @@ def resolve_local(processor, searcher, composer, token):
 
         if identifiers_equal(token, local.name):
             if local.depth == -1:
-                error(processor, searcher, "Cannot read local variable in its own initializer.")
+                processor = error(
+                    processor,
+                    searcher,
+                    "Cannot read local variable in its own initializer.",
+                )
 
-            return i
+            return processor, i
 
-    return -1
+    return processor, -1
 
 
     # @expose
@@ -603,73 +684,123 @@ def resolve_local(processor, searcher, composer, token):
     #     return -1
 
 
-# def add_local(processor, name):
-#     # type: (Parser, scanner.Token) -> Parser
-#     """
-#     """
-#     # assert processor.composer is not None
-#     if processor.composer.local_count == UINT8_COUNT:
-#         error(processor, "Too many local variables in function.")
-#         return processor
+def add_local(processor, searcher, composer, token):
+    # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, Compiler]
+    """
+    """
+    if composer.local_count == UINT8_COUNT:
+        return error(processor, searcher, "Too many local variables in function."), composer
 
-#     local = processor.composer.locals[processor.composer.local_count]
-#     processor.composer.local_count += 1
+    local = composer.locals[composer.local_count]
+    composer.local_count += 1
 
-#     local.name = name
-#     local.depth = -1
+    local.name = token
+    local.depth = composer.scope_depth
 
-#     return processor
+    return processor, composer
 
 
-# def declare_variable(processor):
-#     # type: (Parser) -> Parser
-#     """
-#     """
-#     # assert processor.composer is not None
-#     if processor.composer.scope_depth == 0:
-#         return processor
+    # def add_local(self, name):
+    #     #
+    #     """
+    #     """
+    #     if self.debug_level >= 3:
+    #         print("  {}".format(sys._getframe().f_code.co_name))
 
-#     name = processor.previous
+    #     if self.composer.local_count == UINT8_COUNT:
+    #         self.error("Too many local variables in function.")
+    #         return None
 
-#     for i in range(processor.composer.local_count - 1, -1, -1):
-#         local = processor.composer.locals[i]
+    #     local = self.composer.locals[self.composer.local_count]
+    #     self.composer.local_count += 1
 
-#         if local.depth != -1 and local.depth < processor.composer.scope_depth:
-#             break
-
-#         if identifiers_equal(name, local.name):
-#             return error(processor, "Variable with this name already declared in this scope.")
-
-#     # assert name is not None
-#     return add_local(processor, name)
+    #     local.name = name
+    #     local.depth = -1
 
 
-# def parse_variable(processor, error_message):
-#     # type: (Parser, str) -> Tuple[Parser, int]
-#     """
-#     """
-#     processor = consume(processor, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
-#     processor = declare_variable(processor)
+def declare_variable(processor, searcher, composer):
+    # type: (Parser, scanner.Scanner, Compiler) -> Tuple[Parser, Compiler]
+    """
+    """
+    if composer.scope_depth == 0:
+        return processor, composer
 
-#     # assert processor.composer is not None
-#     if processor.composer.scope_depth > 0:
-#         return processor, 0
+    token = processor.previous
 
-#     # assert processor.previous is not None
-#     return identifier_constant(processor, processor.previous)
+    for i in range(composer.local_count - 1, -1, -1):
+        local = composer.locals[i]
+
+        if local.depth != -1 and local.depth < composer.scope_depth:
+            break
+
+        if identifiers_equal(token, local.name):
+            processor = error(
+                processor,
+                searcher,
+                "Variable with this name already declared in this scope.",
+            )
+
+            return processor, composer
+
+    assert token is not None
+    return add_local(processor, searcher, composer, token)
 
 
-# def define_variable(processor):
-#     # type: (Parser) -> Parser
-#     """
-#     """
-#     breakpoint()
+def parse_variable(processor, searcher, composer, bytecode, error_message):
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk, str) -> Tuple[Parser, Optional[value.Value]]
+    """
+    """
+    processor = consume(processor, searcher, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
+    processor, composer = declare_variable(processor, searcher, composer)
 
-#     # assert processor.composer is not None
-#     if processor.composer.scope_depth > 0:
-#         return processor
+    if composer.scope_depth > 0:
+        return processor, 0
 
-#     return processor
+    return identifier_constant(processor, searcher, bytecode, processor.previous)
+
+
+def mark_initialized(processor, composer):
+    # type: (Parser, Compiler) -> Compiler
+    """
+    """
+    assert composer.scope_depth > 0
+    local_count = composer.local_count - 1
+    composer.locals[local_count].depth = composer.scope_depth
+
+    return composer
+
+
+    # def mark_initialized(self):
+    #     #
+    #     """
+    #     """
+    #     if self.composer.scope_depth == 0:
+    #         return None
+
+    #     local_count = self.composer.local_count - 1
+    #     self.composer.locals[local_count].depth = self.composer.scope_depth
+
+
+def define_variable(processor, composer):
+    # type: (Parser, Compiler) -> Compiler
+    """
+    """
+    assert composer.scope_depth > 0
+    return mark_initialized(processor, composer)
+
+
+    # def define_variable(self, global_var):
+    #     #
+    #     """
+    #     """
+    #     if self.debug_level >= 3:
+    #         print("  {}".format(sys._getframe().f_code.co_name))
+
+    #     if self.composer.scope_depth > 0:
+    #         self.mark_initialized()
+    #         return None
+
+    #     self.emit_bytes(chunk.OpCode.OP_DEFINE_GLOBAL, global_var)
 
 
 def get_rule(token_type):
@@ -713,7 +844,7 @@ def compile(source, bytecode, debug_level):
         if condition:
             break
 
-        processor = declaration(processor, searcher, composer, bytecode)
+        processor, _, bytecode = declaration(processor, searcher, composer, bytecode)
 
     processor, bytecode = end_compiler(processor, bytecode)
 

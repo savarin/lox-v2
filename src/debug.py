@@ -61,7 +61,7 @@ def disassemble_instruction(bytecode, offset):
     if offset > 0 and line == bytecode.lines[offset - 1]:
         print("   |", end=" ")
     else:
-        print("{:04d}".format(line), end=" ")
+        print("{:4d}".format(line), end=" ")
 
     assert bytecode.code is not None
     instruction = bytecode.code[offset]
