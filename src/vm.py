@@ -24,7 +24,7 @@ class VM():
         """Stores bytecode and current instruction pointer."""
         self.bytecode = None  # type: Optional[chunk.Chunk]
         self.ip = 0
-        self.stack = None  # type: Optional[List]
+        self.stack = None  # type: Optional[List[Optional[value.Value]]]
         self.stack_top = 0
         self.counter = 0
 
@@ -74,14 +74,21 @@ def pop(emulator):
     emulator.stack_top -= 1
 
     assert emulator.stack is not None
-    return emulator, emulator.stack[emulator.stack_top]
+    val = emulator.stack[emulator.stack_top]
+
+    assert val is not None
+    return emulator, val
 
 
 def peek(emulator, distance):
-    #
+    # type: (VM, int) -> Tuple[VM, value.Value]
     """
     """
-    return emulator, emulator.stack[emulator.stack_top - 1 - distance]
+    assert emulator.stack is not None
+    val = emulator.stack[emulator.stack_top - 1 - distance]
+
+    assert val is not None
+    return emulator, val
 
 
 def read_byte(emulator):
@@ -140,11 +147,19 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_GET_LOCAL:
             emulator, slot = read_byte(emulator)
-            emulator = push(emulator, emulator.stack[slot])
+            assert emulator.stack is not None
+            assert isinstance(slot, int)
+            val = emulator.stack[slot]
+            assert val is not None
+            emulator = push(emulator, val)
 
         elif instruction == chunk.OpCode.OP_SET_LOCAL:
             emulator, slot = read_byte(emulator)
-            emulator, emulator.stack[slot] = peek(emulator, 0)
+            assert emulator.stack is not None
+            assert isinstance(slot, int)
+            val = emulator.stack[slot]
+            assert val is not None
+            emulator, val = peek(emulator, 0)
 
         elif instruction == chunk.OpCode.OP_ADD:
             emulator = binary_op(emulator, "+")

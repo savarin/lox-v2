@@ -262,7 +262,7 @@ def end_compiler(processor, bytecode):
 
 @expose
 def begin_scope(processor, composer):
-    # type: (Compiler) -> Compiler
+    # type: (Parser, Compiler) -> Compiler
     """
     """
     composer.scope_depth += 1
@@ -293,7 +293,7 @@ def end_scope(processor, composer, bytecode):
 
 @expose
 def binary(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Implements infix parser for binary operations."""
     # Remember the operator
     assert processor.previous is not None
@@ -320,7 +320,7 @@ def binary(processor, searcher, composer, bytecode):
 
 @expose
 def expression(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Compiles expression."""
     return parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_ASSIGNMENT)
 
@@ -349,7 +349,7 @@ def block(processor, searcher, composer, bytecode):
 
 @expose
 def expression_statement(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Evaluates expression statement prior to semicolon."""
     processor, bytecode = expression(processor, searcher, composer, bytecode)
 
@@ -365,7 +365,7 @@ def expression_statement(processor, searcher, composer, bytecode):
 
 @expose
 def print_statement(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Evaluates expression and prints result."""
     processor, bytecode = expression(processor, searcher, composer, bytecode)
 
@@ -436,7 +436,7 @@ def statement(processor, searcher, composer, bytecode):
 
 @expose
 def grouping(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Parser
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
     processor, bytecode = expression(processor, searcher, composer, bytecode)
 
@@ -450,7 +450,7 @@ def grouping(processor, searcher, composer, bytecode):
 
 @expose
 def number(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Append number literal to bytecode."""
     assert processor.previous is not None
     assert processor.previous.source is not None
@@ -497,7 +497,7 @@ def named_variable(processor, searcher, composer, bytecode, token):
 
 @expose
 def variable(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """
     """
     return named_variable(processor, searcher, composer, bytecode, processor.previous)
@@ -513,7 +513,7 @@ def variable(processor, searcher, composer, bytecode):
 
 @expose
 def unary(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Consumes leading minus and appends negated value."""
     assert processor.previous is not None
     operator_type = processor.previous.token_type
@@ -530,7 +530,7 @@ def unary(processor, searcher, composer, bytecode):
 
 @expose
 def parse_precedence(processor, searcher, composer, bytecode, precedence):
-    # type: (Parser, scanner.Scanner, chunk.Chunk, Precedence) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk, Precedence) -> Tuple[Parser, chunk.Chunk]
     """Starts at current token and parses expression at given precedence level
     or higher."""
     processor = advance(processor, searcher)
@@ -540,7 +540,7 @@ def parse_precedence(processor, searcher, composer, bytecode, precedence):
 
     if prefix_rule is None:
         error(processor, searcher, "Expect expression")
-        return None
+        return processor, bytecode
 
     processor, bytecode = prefix_rule(processor, searcher, composer, bytecode)
 
