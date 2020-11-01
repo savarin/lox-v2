@@ -6,7 +6,7 @@ import compiler
 import scanner
 import value
 
-STACK_MAX = 16
+STACK_MAX = 8
 
 Operation = str
 InterpretResultTuple = Tuple["InterpretResult", Optional[value.Value], Optional[chunk.OpCode]]
