@@ -15,6 +15,8 @@ class OpCode(enum.Enum):
     instruction we're dealing with."""
     OP_CONSTANT = "OP_CONSTANT"
     OP_POP = "OP_POP"
+    OP_GET_LOCAL = "OP_GET_LOCAL"
+    OP_SET_LOCAL = "OP_SET_LOCAL"
     OP_ADD = "OP_ADD"
     OP_SUBTRACT = "OP_SUBTRACT"
     OP_MULTIPLY = "OP_MULTIPLY"

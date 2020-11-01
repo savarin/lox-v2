@@ -77,6 +77,13 @@ def pop(emulator):
     return emulator, emulator.stack[emulator.stack_top]
 
 
+def peek(emulator, distance):
+    #
+    """
+    """
+    return emulator, emulator.stack[emulator.stack_top - 1 - distance]
+
+
 def read_byte(emulator):
     # type: (VM) -> Tuple[VM, chunk.Byte]
     """Reads byte at current instruction pointer and advances pointer."""
@@ -130,6 +137,14 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_POP:
             emulator, constant = pop(emulator)
+
+        elif instruction == chunk.OpCode.OP_GET_LOCAL:
+            emulator, slot = read_byte(emulator)
+            emulator = push(emulator, emulator.stack[slot])
+
+        elif instruction == chunk.OpCode.OP_SET_LOCAL:
+            emulator, slot = read_byte(emulator)
+            emulator, emulator.stack[slot] = peek(emulator, 0)
 
         elif instruction == chunk.OpCode.OP_ADD:
             emulator = binary_op(emulator, "+")

@@ -266,7 +266,6 @@ def begin_scope(processor, composer):
     """
     """
     composer.scope_depth += 1
-
     return composer
 
 
@@ -293,7 +292,7 @@ def end_scope(processor, composer, bytecode):
 
 
 @expose
-def binary(processor, searcher, bytecode):
+def binary(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Implements infix parser for binary operations."""
     # Remember the operator
@@ -305,7 +304,7 @@ def binary(processor, searcher, bytecode):
 
     # Get precedence which has 1 priority level above precedence of current rule
     precedence = Precedence(rule.precedence.value + 1)
-    parse_precedence(processor, searcher, bytecode, precedence)
+    processor, bytecode = parse_precedence(processor, searcher, composer, bytecode, precedence)
 
     if operator_type == scanner.TokenType.TOKEN_PLUS:
         return emit_byte(processor, bytecode, chunk.OpCode.OP_ADD)
@@ -320,10 +319,10 @@ def binary(processor, searcher, bytecode):
 
 
 @expose
-def expression(processor, searcher, bytecode):
-    # type: (Parser, scanner.Scanner, chunk.Chunk) -> None
+def expression(processor, searcher, composer, bytecode):
+    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Compiles expression."""
-    parse_precedence(processor, searcher, bytecode, Precedence.PREC_ASSIGNMENT)
+    return parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_ASSIGNMENT)
 
 
 @expose
@@ -349,10 +348,10 @@ def block(processor, searcher, composer, bytecode):
 
 
 @expose
-def expression_statement(processor, searcher, bytecode):
+def expression_statement(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Evaluates expression statement prior to semicolon."""
-    expression(processor, searcher, bytecode)
+    processor, bytecode = expression(processor, searcher, composer, bytecode)
 
     processor = consume(
         processor,
@@ -365,10 +364,10 @@ def expression_statement(processor, searcher, bytecode):
 
 
 @expose
-def print_statement(processor, searcher, bytecode):
+def print_statement(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Evaluates expression and prints result."""
-    expression(processor, searcher, bytecode)
+    processor, bytecode = expression(processor, searcher, composer, bytecode)
 
     processor = consume(
         processor,
@@ -421,7 +420,7 @@ def statement(processor, searcher, composer, bytecode):
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_PRINT)
 
     if condition:
-        processor, bytecode = print_statement(processor, searcher, bytecode)
+        processor, bytecode = print_statement(processor, searcher, composer, bytecode)
         return processor, composer, bytecode
 
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_LEFT_BRACE)
@@ -431,15 +430,15 @@ def statement(processor, searcher, composer, bytecode):
         processor = block(processor, searcher, composer, bytecode)
         processor, composer, bytecode = end_scope(processor, composer, bytecode)
 
-    processor, bytecode = expression_statement(processor, searcher, bytecode)
+    processor, bytecode = expression_statement(processor, searcher, composer, bytecode)
     return processor, composer, bytecode
 
 
 @expose
-def grouping(processor, searcher, bytecode):
+def grouping(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
-    expression(processor, searcher, bytecode)
+    processor, bytecode = expression(processor, searcher, composer, bytecode)
 
     return consume(
         processor,
@@ -450,7 +449,7 @@ def grouping(processor, searcher, bytecode):
 
 
 @expose
-def number(processor, searcher, bytecode):
+def number(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Append number literal to bytecode."""
     assert processor.previous is not None
@@ -461,21 +460,17 @@ def number(processor, searcher, bytecode):
 
 
 @expose
-def named_variable(processor, searcher, bytecode, token):
+def named_variable(processor, searcher, composer, bytecode, token):
     #
     """
     """
-    arg = resolve_local(token)
+    arg = resolve_local(processor, searcher, composer, token)
 
     if match(processor, searcher, scanner.TokenType.TOKEN_EQUAL):
-        expression(processor, searcher, bytecode)
-        emit_bytes(processor, bytecode, chunk.OpCode.OP_SET_LOCAL, arg)
+        processor, bytecode = expression(processor, searcher, composer, bytecode)
+        return emit_bytes(processor, bytecode, chunk.OpCode.OP_SET_LOCAL, arg)
     else:
-        emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
-
-
-    # arg = identifier_constant(processor, searcher, bytecode, token)
-    # return emit_bytes(chunk.OpCode.OP_GET_GLOBAL, arg)
+        return emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
 
 
     # @expose
@@ -501,11 +496,11 @@ def named_variable(processor, searcher, bytecode, token):
 
 
 @expose
-def variable(processor, searcher, bytecode):
+def variable(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """
     """
-    return named_variable(processor, searcher, bytecode, processor.previous)
+    return named_variable(processor, searcher, composer, bytecode, processor.previous)
 
 
     # @expose
@@ -517,14 +512,14 @@ def variable(processor, searcher, bytecode):
 
 
 @expose
-def unary(processor, searcher, bytecode):
+def unary(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Consumes leading minus and appends negated value."""
     assert processor.previous is not None
     operator_type = processor.previous.token_type
 
     # Compile the operand
-    parse_precedence(processor, searcher, bytecode, Precedence.PREC_UNARY)
+    processor, bytecode = parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_UNARY)
 
     # Emit the operator instruction
     if operator_type == scanner.TokenType.TOKEN_MINUS:
@@ -534,8 +529,8 @@ def unary(processor, searcher, bytecode):
 
 
 @expose
-def parse_precedence(processor, searcher, bytecode, precedence):
-    # type: (Parser, scanner.Scanner, chunk.Chunk, Precedence) -> None
+def parse_precedence(processor, searcher, composer, bytecode, precedence):
+    # type: (Parser, scanner.Scanner, chunk.Chunk, Precedence) -> Tuple[Parser, chunk.Chunk]
     """Starts at current token and parses expression at given precedence level
     or higher."""
     processor = advance(processor, searcher)
@@ -547,7 +542,7 @@ def parse_precedence(processor, searcher, bytecode, precedence):
         error(processor, searcher, "Expect expression")
         return None
 
-    prefix_rule(processor, searcher, bytecode)
+    processor, bytecode = prefix_rule(processor, searcher, composer, bytecode)
 
     assert processor.current is not None
     while precedence.value <= get_rule(processor.current.token_type).precedence.value:
@@ -556,7 +551,9 @@ def parse_precedence(processor, searcher, bytecode, precedence):
         assert processor.previous is not None
         infix_rule = get_rule(processor.previous.token_type).infix
 
-        infix_rule(processor, searcher, bytecode)
+        processor, bytecode = infix_rule(processor, searcher, composer, bytecode)
+
+    return processor, bytecode
 
 
 # @expose
@@ -566,6 +563,7 @@ def parse_precedence(processor, searcher, bytecode, precedence):
 #     """
 #     val = token.source[token.start:token.start + token.length]
 #     return make_constant(processor, searcher, bytecode, val)
+
 
     # @expose
     # def identifier_constant(self, name):
@@ -585,6 +583,43 @@ def identifiers_equal(a, b):
         return False
 
     return a.source == b.source
+
+
+@expose
+def resolve_local(processor, searcher, composer, token):
+    #
+    """
+    """
+    for i in range(composer.local_count - 1, -1, -1):
+        local = composer.locals[i]
+
+        if identifiers_equal(token, local.name):
+            if local.depth == -1:
+                error(processor, searcher, "Cannot read local variable in its own initializer.")
+
+            return i
+
+    return -1
+
+
+    # @expose
+    # def resolve_local(self, name):
+    #     #
+    #     """
+    #     """
+    #     if self.debug_level >= 3:
+    #         print("  {}".format(sys._getframe().f_code.co_name))
+
+    #     for i in range(self.composer.local_count - 1, -1, -1):
+    #         local = self.composer.locals[i]
+
+    #         if self.identifiers_equal(name, local.name):
+    #             if local.depth == -1:
+    #                 self.error("Cannot read local variable in its own initializer.")
+
+    #             return i
+
+    #     return -1
 
 
 # def add_local(processor, name):

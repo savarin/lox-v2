@@ -16,8 +16,8 @@ def disassemble_chunk(bytecode, name):
     print("")
 
 
-def constant_instruction(bytecode, name, offset):
-    # type: (chunk.Chunk, Name, Offset) -> Offset
+def constant_instruction(opcode_name, offset, bytecode):
+    # type: (Name, Offset, chunk.Chunk) -> Offset
     """Utility function for constant instructions."""
     assert bytecode.code is not None
     constant = bytecode.code[offset + 1]
@@ -28,15 +28,25 @@ def constant_instruction(bytecode, name, offset):
     val = bytecode.constants.values[constant]
 
     assert constant is not None
-    print("{:16s} {:4d} '{}'".format(name, constant, val))
+    print("{:16s} {:4d} '{}'".format(opcode_name, constant, val))
     return offset + 2
 
 
-def simple_instruction(name, offset):
+def simple_instruction(opcode_name, offset):
     # type: (Name, Offset) -> Offset
     """Utility function for simple instructions."""
-    print("{}".format(name))
+    print("{}".format(opcode_name))
     return offset + 1
+
+
+def byte_instruction(opcode_name, offset, bytecode):
+    #
+    """
+    """
+    slot = bytecode.code[offset + 1]
+
+    print("{:16s} {:4d}".format(opcode_name, slot))
+    return offset + 2
 
 
 def disassemble_instruction(bytecode, offset):
@@ -57,9 +67,13 @@ def disassemble_instruction(bytecode, offset):
     instruction = bytecode.code[offset]
 
     if instruction == chunk.OpCode.OP_CONSTANT:
-        return constant_instruction(bytecode, "OP_CONSTANT", offset)
+        return constant_instruction("OP_CONSTANT", offset, bytecode)
     elif instruction == chunk.OpCode.OP_POP:
         return simple_instruction("OP_POP", offset)
+    elif instruction == chunk.OpCode.OP_GET_LOCAL:
+        return byte_instruction("OP_GET_LOCAL", offset, bytecode)
+    elif instruction == chunk.OpCode.OP_SET_LOCAL:
+        return byte_instruction("OP_SET_LOCAL", offset, bytecode)
     elif instruction == chunk.OpCode.OP_ADD:
         return simple_instruction("OP_ADD", offset)
     elif instruction == chunk.OpCode.OP_SUBTRACT:
