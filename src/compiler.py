@@ -37,7 +37,7 @@ rule_map = {
     "TOKEN_SLASH":         [None,       "binary", "PREC_FACTOR"],
     "TOKEN_STAR":          [None,       "binary", "PREC_FACTOR"],
     "TOKEN_EQUAL":         [None,       None,     "PREC_NONE"],
-    "TOKEN_IDENTIFIER":    [None,       None,     "PREC_NONE"],
+    "TOKEN_IDENTIFIER":    ["variable", None,     "PREC_NONE"],
     "TOKEN_NUMBER":        ["number",   None,     "PREC_NONE"],
     "TOKEN_FUN":           [None,       None,     "PREC_NONE"],
     "TOKEN_LET":           [None,       None,     "PREC_NONE"],
@@ -135,11 +135,8 @@ def error_at(processor, searcher, token, message):
     elif token.token_type == scanner.TokenType.TOKEN_ERROR:
         pass
     else:
-        token_start = token.start
-        token_end = token_start + token.length
-
         assert searcher.source is not None
-        current_token = searcher.source[token_start:token_end]
+        current_token = searcher.source[token.start:token.start + token.length]
         print("at {}".format(current_token))
 
     return processor
@@ -263,7 +260,8 @@ def end_compiler(processor, bytecode):
     return emit_return(processor, bytecode)
 
 
-def begin_scope(composer):
+@expose
+def begin_scope(processor, composer):
     # type: (Compiler) -> Compiler
     """
     """
@@ -272,6 +270,7 @@ def begin_scope(composer):
     return composer
 
 
+@expose
 def end_scope(processor, composer, bytecode):
     # type: (Parser, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """
@@ -327,6 +326,7 @@ def expression(processor, searcher, bytecode):
     parse_precedence(processor, searcher, bytecode, Precedence.PREC_ASSIGNMENT)
 
 
+@expose
 def block(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Parser
     """
@@ -427,7 +427,7 @@ def statement(processor, searcher, composer, bytecode):
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_LEFT_BRACE)
 
     if condition:
-        composer = begin_scope(composer)
+        composer = begin_scope(processor, composer)
         processor = block(processor, searcher, composer, bytecode)
         processor, composer, bytecode = end_scope(processor, composer, bytecode)
 
@@ -461,9 +461,65 @@ def number(processor, searcher, bytecode):
 
 
 @expose
+def named_variable(processor, searcher, bytecode, token):
+    #
+    """
+    """
+    arg = resolve_local(token)
+
+    if match(processor, searcher, scanner.TokenType.TOKEN_EQUAL):
+        expression(processor, searcher, bytecode)
+        emit_bytes(processor, bytecode, chunk.OpCode.OP_SET_LOCAL, arg)
+    else:
+        emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
+
+
+    # arg = identifier_constant(processor, searcher, bytecode, token)
+    # return emit_bytes(chunk.OpCode.OP_GET_GLOBAL, arg)
+
+
+    # @expose
+    # def named_variable(self, name, can_assign):
+    #     #
+    #     """
+    #     """
+    #     arg = self.resolve_local(name)
+
+    #     if arg != -1:
+    #         get_op = chunk.OpCode.OP_GET_LOCAL
+    #         set_op = chunk.OpCode.OP_SET_LOCAL
+    #     else:
+    #         arg = self.identifier_constant(name)
+    #         get_op = chunk.OpCode.OP_GET_GLOBAL
+    #         set_op = chunk.OpCode.OP_SET_GLOBAL
+
+    #     if can_assign and self.match(scanner.TokenType.TOKEN_EQUAL):
+    #         self.expression()
+    #         self.emit_bytes(set_op, arg)
+    #     else:
+    #         self.emit_bytes(get_op, arg)
+
+
+@expose
+def variable(processor, searcher, bytecode):
+    # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    """
+    """
+    return named_variable(processor, searcher, bytecode, processor.previous)
+
+
+    # @expose
+    # def variable(self, can_assign):
+    #     # type: (bool) -> None
+    #     """
+    #     """
+    #     self.named_variable(self.previous, can_assign)
+
+
+@expose
 def unary(processor, searcher, bytecode):
     # type: (Parser, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
-    """Comsumes leading minus and appends negated value."""
+    """Consumes leading minus and appends negated value."""
     assert processor.previous is not None
     operator_type = processor.previous.token_type
 
@@ -503,14 +559,22 @@ def parse_precedence(processor, searcher, bytecode, precedence):
         infix_rule(processor, searcher, bytecode)
 
 
-@expose
-def identifier_constant(processor, name):
-    # type: (Parser, scanner.Token) -> Tuple[Parser, int]
-    """
-    """
-    breakpoint()
+# @expose
+# def identifier_constant(processor, searcher, bytecode, token):
+#     # type: (Parser, scanner.Scanner, chunk.Chunk, scanner.Token) -> Tuple[Parser, Optional[value.Value]]
+#     """
+#     """
+#     val = token.source[token.start:token.start + token.length]
+#     return make_constant(processor, searcher, bytecode, val)
 
-    return processor, 0
+    # @expose
+    # def identifier_constant(self, name):
+    #     #
+    #     """
+    #     """
+    #     chars = name.source[:name.length]
+    #     obj_val = value.obj_val(value.copy_string(chars, name.length))
+    #     return self.make_constant(obj_val)
 
 
 def identifiers_equal(a, b):
@@ -602,6 +666,7 @@ def get_rule(token_type):
         "grouping": grouping,
         "number": number,
         "unary": unary,
+        "variable": variable,
     }
 
     rule = rule_map[token_type.name]
