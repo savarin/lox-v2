@@ -8,6 +8,7 @@ import scanner
 import value
 
 UINT8_MAX = 256
+UINT8_COUNT = UINT8_MAX + 1
 
 
 def expose(f):
@@ -67,6 +68,35 @@ class ParseRule():
         self.prefix = prefix
         self.infix = infix
         self.precedence = precedence
+
+
+class Local():
+    def __init__(self):
+        #
+        """
+        """
+        self.name = None
+        self.depth = None
+
+
+class Compiler():
+    def __init__(self):
+        #
+        """
+        """
+        self.locals = None
+        self.local_count = 0
+        self.scope_depth = 0
+
+
+def init_compiler():
+    #
+    """
+    """
+    composer = Compiler()
+    composer.locals = [Local() for _ in range(UINT8_COUNT)]
+
+    return composer
 
 
 class Parser():
