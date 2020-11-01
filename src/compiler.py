@@ -7,7 +7,7 @@ import debug
 import scanner
 import value
 
-UINT8_MAX = 256
+UINT8_MAX = 8
 UINT8_COUNT = UINT8_MAX + 1
 
 
@@ -406,7 +406,7 @@ def synchronize(processor, searcher):
 def declaration(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Parser
     """Compiles declarations until end of source code reached."""
-    processor, bytecode = statement(processor, searcher, composer, bytecode)
+    processor, composer, bytecode = statement(processor, searcher, composer, bytecode)
 
     if processor.panic_mode:
         return synchronize(processor, searcher)
@@ -416,12 +416,13 @@ def declaration(processor, searcher, composer, bytecode):
 
 @expose
 def statement(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """Handler for statements."""
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_PRINT)
 
     if condition:
-        return print_statement(processor, searcher, bytecode)
+        processor, bytecode = print_statement(processor, searcher, bytecode)
+        return processor, composer, bytecode
 
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_LEFT_BRACE)
 
@@ -430,7 +431,8 @@ def statement(processor, searcher, composer, bytecode):
         processor = block(processor, searcher, composer, bytecode)
         processor, composer, bytecode = end_scope(processor, composer, bytecode)
 
-    return expression_statement(processor, searcher, bytecode)
+    processor, bytecode = expression_statement(processor, searcher, bytecode)
+    return processor, composer, bytecode
 
 
 @expose
@@ -486,7 +488,7 @@ def parse_precedence(processor, searcher, bytecode, precedence):
     prefix_rule = get_rule(processor.previous.token_type).prefix
 
     if prefix_rule is None:
-        error(searcher, processor, "Expect expression")
+        error(processor, searcher, "Expect expression")
         return None
 
     prefix_rule(processor, searcher, bytecode)
