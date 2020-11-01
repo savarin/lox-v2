@@ -333,8 +333,10 @@ def variable_declaration(processor, searcher, composer, bytecode):
     processor, _ = parse_variable(processor, searcher, composer, bytecode, "Expect variable name.")
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
-    assert condition
-    processor, bytecode = expression(processor, searcher, composer, bytecode)
+    if condition:
+        processor, bytecode = expression(processor, searcher, composer, bytecode)
+    else:
+        processor, bytecode = emit_byte(processor, bytecode, chunk.OpCode.OP_NIL)
 
     processor = consume(
         processor,
@@ -362,7 +364,6 @@ def variable_declaration(processor, searcher, composer, bytecode):
     #     self.consume(scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after variable declaration")
 
     #     self.define_variable(global_var)
-
 
 @expose
 def block(processor, searcher, composer, bytecode):
@@ -459,7 +460,7 @@ def declaration(processor, searcher, composer, bytecode):
         processor, composer, bytecode = statement(processor, searcher, composer, bytecode)
 
     if processor.panic_mode:
-        return synchronize(processor, searcher)
+        processor = synchronize(processor, searcher)
 
     return processor, composer, bytecode
 
