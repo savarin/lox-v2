@@ -36,7 +36,7 @@ class TokenType(enum.Enum):
 
 class Token():
     def __init__(self, token_type, start, length, source, line):
-        # type: (TokenType, int, int, Optional[str], int) -> None
+        # type: (TokenType, int, int, Optional[Source], int) -> None
         """Stores details of tokens converted from source code."""
         self.token_type = token_type
         self.start = start

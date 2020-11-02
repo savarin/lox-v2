@@ -6,8 +6,6 @@ import value
 
 Byte = Union["OpCode", value.Value]
 Code = Optional[List[Optional[Byte]]]
-Line = int
-Lines = Optional[List[Optional[Line]]]
 
 
 class OpCode(enum.Enum):
@@ -33,7 +31,7 @@ class Chunk():
         self.count = 0
         self.capacity = 0
         self.code = None  # type: Code
-        self.lines = None  # type: Lines
+        self.lines = None  # type: Optional[List[int]]
         self.constants = None  # type: Optional[value.ValueArray]
 
 
@@ -65,7 +63,7 @@ def free_chunk(bytecode):
 
 
 def write_chunk(bytecode, byte, line):
-    # type: (Chunk, Byte, Line) -> Chunk
+    # type: (Chunk, Byte, int) -> Chunk
     """Append byte to the end of the chunk."""
     # If current array not have capacity for new byte, grow array.
     if bytecode.capacity < bytecode.count + 1:
