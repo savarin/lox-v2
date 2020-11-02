@@ -347,21 +347,6 @@ def variable_declaration(processor, searcher, composer, bytecode):
     return processor, composer, bytecode
 
 
-    # def var_declaration(self):
-    #     #
-    #     """
-    #     """
-    #     global_var = self.parse_variable("Expect variable name.")
-
-    #     if self.match(scanner.TokenType.TOKEN_EQUAL):
-    #         self.expression()
-    #     else:
-    #         self.emit_byte(chunk.OpCode.OP_NIL)
-
-    #     self.consume(scanner.TokenType.TOKEN_SEMICOLON, "Expect ';' after variable declaration")
-
-    #     self.define_variable(global_var)
-
 @expose
 def block(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
@@ -523,42 +508,12 @@ def named_variable(processor, searcher, composer, bytecode, token):
     return emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
 
 
-    # @expose
-    # def named_variable(self, name, can_assign):
-    #     #
-    #     """
-    #     """
-    #     arg = self.resolve_local(name)
-
-    #     if arg != -1:
-    #         get_op = chunk.OpCode.OP_GET_LOCAL
-    #         set_op = chunk.OpCode.OP_SET_LOCAL
-    #     else:
-    #         arg = self.identifier_constant(name)
-    #         get_op = chunk.OpCode.OP_GET_GLOBAL
-    #         set_op = chunk.OpCode.OP_SET_GLOBAL
-
-    #     if can_assign and self.match(scanner.TokenType.TOKEN_EQUAL):
-    #         self.expression()
-    #         self.emit_bytes(set_op, arg)
-    #     else:
-    #         self.emit_bytes(get_op, arg)
-
-
 @expose
 def variable(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """
     """
     return named_variable(processor, searcher, composer, bytecode, processor.previous)
-
-
-    # @expose
-    # def variable(self, can_assign):
-    #     # type: (bool) -> None
-    #     """
-    #     """
-    #     self.named_variable(self.previous, can_assign)
 
 
 @expose
@@ -632,16 +587,6 @@ def identifier_constant(processor, searcher, bytecode, token):
     return make_constant(processor, searcher, bytecode, val)
 
 
-    # @expose
-    # def identifier_constant(self, name):
-    #     #
-    #     """
-    #     """
-    #     chars = name.source[:name.length]
-    #     obj_val = value.obj_val(value.copy_string(chars, name.length))
-    #     return self.make_constant(obj_val)
-
-
 @expose
 def resolve_local(processor, searcher, composer, token):
     # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, int]
@@ -663,26 +608,6 @@ def resolve_local(processor, searcher, composer, token):
     return processor, -1
 
 
-    # @expose
-    # def resolve_local(self, name):
-    #     #
-    #     """
-    #     """
-    #     if self.debug_level >= 3:
-    #         print("  {}".format(sys._getframe().f_code.co_name))
-
-    #     for i in range(self.composer.local_count - 1, -1, -1):
-    #         local = self.composer.locals[i]
-
-    #         if self.identifiers_equal(name, local.name):
-    #             if local.depth == -1:
-    #                 self.error("Cannot read local variable in its own initializer.")
-
-    #             return i
-
-    #     return -1
-
-
 @expose
 def add_local(processor, searcher, composer, token):
     # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, Compiler]
@@ -698,24 +623,6 @@ def add_local(processor, searcher, composer, token):
     local.depth = composer.scope_depth
 
     return processor, composer
-
-
-    # def add_local(self, name):
-    #     #
-    #     """
-    #     """
-    #     if self.debug_level >= 3:
-    #         print("  {}".format(sys._getframe().f_code.co_name))
-
-    #     if self.composer.local_count == UINT8_COUNT:
-    #         self.error("Too many local variables in function.")
-    #         return None
-
-    #     local = self.composer.locals[self.composer.local_count]
-    #     self.composer.local_count += 1
-
-    #     local.name = name
-    #     local.depth = -1
 
 
 @expose
@@ -773,17 +680,6 @@ def mark_initialized(processor, composer):
     return composer
 
 
-    # def mark_initialized(self):
-    #     #
-    #     """
-    #     """
-    #     if self.composer.scope_depth == 0:
-    #         return None
-
-    #     local_count = self.composer.local_count - 1
-    #     self.composer.locals[local_count].depth = self.composer.scope_depth
-
-
 @expose
 def define_variable(processor, composer):
     # type: (Parser, Compiler) -> Compiler
@@ -791,20 +687,6 @@ def define_variable(processor, composer):
     """
     assert composer.scope_depth > 0
     return mark_initialized(processor, composer)
-
-
-    # def define_variable(self, global_var):
-    #     #
-    #     """
-    #     """
-    #     if self.debug_level >= 3:
-    #         print("  {}".format(sys._getframe().f_code.co_name))
-
-    #     if self.composer.scope_depth > 0:
-    #         self.mark_initialized()
-    #         return None
-
-    #     self.emit_bytes(chunk.OpCode.OP_DEFINE_GLOBAL, global_var)
 
 
 def get_rule(token_type):
