@@ -291,8 +291,8 @@ def end_scope(processor, composer, bytecode):
 
 
 @expose
-def binary(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def binary(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Implements infix parser for binary operations."""
     # Remember the operator
     assert processor.previous is not None
@@ -303,7 +303,7 @@ def binary(processor, searcher, composer, bytecode):
 
     # Get precedence which has 1 priority level above precedence of current rule
     precedence = Precedence(rule.precedence.value + 1)
-    processor, bytecode = parse_precedence(processor, searcher, composer, bytecode, precedence)
+    processor, bytecode = parse_precedence(processor, composer, searcher, bytecode, precedence)
 
     if operator_type == scanner.TokenType.TOKEN_PLUS:
         return emit_byte(processor, bytecode, chunk.OpCode.OP_ADD)
@@ -318,22 +318,22 @@ def binary(processor, searcher, composer, bytecode):
 
 
 @expose
-def expression(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def expression(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Compiles expression."""
-    return parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_ASSIGNMENT)
+    return parse_precedence(processor, composer, searcher, bytecode, Precedence.PREC_ASSIGNMENT)
 
 
 @expose
-def variable_declaration(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
+def variable_declaration(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """
     """
-    processor, _ = parse_variable(processor, searcher, composer, bytecode, "Expect variable name.")
+    processor, _ = parse_variable(processor, composer, searcher, bytecode, "Expect variable name.")
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
     assert condition
-    processor, bytecode = expression(processor, searcher, composer, bytecode)
+    processor, bytecode = expression(processor, composer, searcher, bytecode)
 
     processor = consume(
         processor,
@@ -348,8 +348,8 @@ def variable_declaration(processor, searcher, composer, bytecode):
 
 
 @expose
-def block(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
+def block(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """
     """
     while True:
@@ -359,7 +359,7 @@ def block(processor, searcher, composer, bytecode):
         if is_right_brace or is_eof:
             break
 
-        processor, composer, bytecode = declaration(processor, searcher, composer, bytecode)
+        processor, composer, bytecode = declaration(processor, composer, searcher, bytecode)
 
     processor = consume(
         processor,
@@ -372,10 +372,10 @@ def block(processor, searcher, composer, bytecode):
 
 
 @expose
-def expression_statement(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def expression_statement(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Evaluates expression statement prior to semicolon."""
-    processor, bytecode = expression(processor, searcher, composer, bytecode)
+    processor, bytecode = expression(processor, composer, searcher, bytecode)
 
     processor = consume(
         processor,
@@ -388,10 +388,10 @@ def expression_statement(processor, searcher, composer, bytecode):
 
 
 @expose
-def print_statement(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def print_statement(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Evaluates expression and prints result."""
-    processor, bytecode = expression(processor, searcher, composer, bytecode)
+    processor, bytecode = expression(processor, composer, searcher, bytecode)
 
     processor = consume(
         processor,
@@ -426,20 +426,20 @@ def synchronize(processor, searcher):
 
 
 @expose
-def declaration(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
+def declaration(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """Compiles declarations until end of source code reached."""
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_VAR)
 
     if condition:
         processor, composer, bytecode = variable_declaration(
             processor,
-            searcher,
             composer,
+            searcher,
             bytecode,
         )
     else:
-        processor, composer, bytecode = statement(processor, searcher, composer, bytecode)
+        processor, composer, bytecode = statement(processor, composer, searcher, bytecode)
 
     if processor.panic_mode:
         processor = synchronize(processor, searcher)
@@ -448,31 +448,31 @@ def declaration(processor, searcher, composer, bytecode):
 
 
 @expose
-def statement(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
+def statement(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """Handler for statements."""
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_PRINT)
 
     if condition:
-        processor, bytecode = print_statement(processor, searcher, composer, bytecode)
+        processor, bytecode = print_statement(processor, composer, searcher, bytecode)
         return processor, composer, bytecode
 
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_LEFT_BRACE)
 
     if condition:
         composer = begin_scope(processor, composer)
-        processor, composer, bytecode = block(processor, searcher, composer, bytecode)
+        processor, composer, bytecode = block(processor, composer, searcher, bytecode)
         return end_scope(processor, composer, bytecode)
 
-    processor, bytecode = expression_statement(processor, searcher, composer, bytecode)
+    processor, bytecode = expression_statement(processor, composer, searcher, bytecode)
     return processor, composer, bytecode
 
 
 @expose
-def grouping(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Parser
+def grouping(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Parser
     """Compiles expression between parentheses and consumes parentheses."""
-    processor, bytecode = expression(processor, searcher, composer, bytecode)
+    processor, bytecode = expression(processor, composer, searcher, bytecode)
 
     return consume(
         processor,
@@ -483,8 +483,8 @@ def grouping(processor, searcher, composer, bytecode):
 
 
 @expose
-def number(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def number(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Append number literal to bytecode."""
     assert processor.previous is not None
     assert processor.previous.source is not None
@@ -494,31 +494,31 @@ def number(processor, searcher, composer, bytecode):
 
 
 @expose
-def named_variable(processor, searcher, composer, bytecode, token):
+def named_variable(processor, composer, searcher, bytecode, token):
     #
     """
     """
-    processor, arg = resolve_local(processor, searcher, composer, token)
+    processor, arg = resolve_local(processor, composer, searcher, token)
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
     if condition:
-        processor, bytecode = expression(processor, searcher, composer, bytecode)
+        processor, bytecode = expression(processor, composer, searcher, bytecode)
         return emit_bytes(processor, bytecode, chunk.OpCode.OP_SET_LOCAL, arg)
 
     return emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
 
 
 @expose
-def variable(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def variable(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """
     """
-    return named_variable(processor, searcher, composer, bytecode, processor.previous)
+    return named_variable(processor, composer, searcher, bytecode, processor.previous)
 
 
 @expose
-def unary(processor, searcher, composer, bytecode):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+def unary(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Consumes leading minus and appends negated value."""
     assert processor.previous is not None
     operator_type = processor.previous.token_type
@@ -526,8 +526,8 @@ def unary(processor, searcher, composer, bytecode):
     # Compile the operand
     processor, bytecode = parse_precedence(
         processor,
-        searcher,
         composer,
+        searcher,
         bytecode,
         Precedence.PREC_UNARY,
     )
@@ -540,8 +540,8 @@ def unary(processor, searcher, composer, bytecode):
 
 
 @expose
-def parse_precedence(processor, searcher, composer, bytecode, precedence):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk, Precedence) -> Tuple[Parser, chunk.Chunk]
+def parse_precedence(processor, composer, searcher, bytecode, precedence):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk, Precedence) -> Tuple[Parser, chunk.Chunk]
     """Starts at current token and parses expression at given precedence level
     or higher."""
     processor = advance(processor, searcher)
@@ -553,7 +553,7 @@ def parse_precedence(processor, searcher, composer, bytecode, precedence):
         error(processor, searcher, "Expect expression")
         return processor, bytecode
 
-    processor, bytecode = prefix_rule(processor, searcher, composer, bytecode)
+    processor, bytecode = prefix_rule(processor, composer, searcher, bytecode)
 
     assert processor.current is not None
     while precedence.value <= get_rule(processor.current.token_type).precedence.value:
@@ -562,7 +562,7 @@ def parse_precedence(processor, searcher, composer, bytecode, precedence):
         assert processor.previous is not None
         infix_rule = get_rule(processor.previous.token_type).infix
 
-        processor, bytecode = infix_rule(processor, searcher, composer, bytecode)
+        processor, bytecode = infix_rule(processor, composer, searcher, bytecode)
 
     return processor, bytecode
 
@@ -588,8 +588,8 @@ def identifier_constant(processor, searcher, bytecode, token):
 
 
 @expose
-def resolve_local(processor, searcher, composer, token):
-    # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, int]
+def resolve_local(processor, composer, searcher, token):
+    # type: (Parser, Compiler, scanner.Scanner, scanner.Token) -> Tuple[Parser, int]
     """
     """
     for i in range(composer.local_count - 1, -1, -1):
@@ -609,8 +609,8 @@ def resolve_local(processor, searcher, composer, token):
 
 
 @expose
-def add_local(processor, searcher, composer, token):
-    # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, Compiler]
+def add_local(processor, composer, searcher, token):
+    # type: (Parser, Compiler, scanner.Scanner, scanner.Token) -> Tuple[Parser, Compiler]
     """
     """
     if composer.local_count == UINT8_COUNT:
@@ -626,8 +626,8 @@ def add_local(processor, searcher, composer, token):
 
 
 @expose
-def declare_variable(processor, searcher, composer):
-    # type: (Parser, scanner.Scanner, Compiler) -> Tuple[Parser, Compiler]
+def declare_variable(processor, composer, searcher):
+    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
     """
     """
     if composer.scope_depth == 0:
@@ -651,16 +651,16 @@ def declare_variable(processor, searcher, composer):
             return processor, composer
 
     assert token is not None
-    return add_local(processor, searcher, composer, token)
+    return add_local(processor, composer, searcher, token)
 
 
 @expose
-def parse_variable(processor, searcher, composer, bytecode, error_message):
-    # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk, str) -> Tuple[Parser, Optional[value.Value]]
+def parse_variable(processor, composer, searcher, bytecode, error_message):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk, str) -> Tuple[Parser, Optional[value.Value]]
     """
     """
     processor = consume(processor, searcher, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
-    processor, composer = declare_variable(processor, searcher, composer)
+    processor, composer = declare_variable(processor, composer, searcher)
 
     if composer.scope_depth > 0:
         return processor, 0
@@ -730,7 +730,7 @@ def compile(source, bytecode, debug_level):
         if condition:
             break
 
-        processor, _, bytecode = declaration(processor, searcher, composer, bytecode)
+        processor, _, bytecode = declaration(processor, composer, searcher, bytecode)
 
     processor, bytecode = end_compiler(processor, bytecode)
 
