@@ -567,23 +567,13 @@ def parse_precedence(processor, composer, searcher, bytecode, precedence):
 
 
 def identifiers_equal(a, b):
-    # type: (scanner.Token, scanner.Token) -> bool
+    # type: (Optional[scanner.Token], Optional[scanner.Token]) -> bool
     """
     """
     if not a or not b or a.length != b.length:
         return False
 
     return a.source == b.source
-
-
-@expose
-def identifier_constant(processor, searcher, bytecode, token):
-    # type: (Parser, scanner.Scanner, chunk.Chunk, scanner.Token) -> Tuple[Parser, Optional[value.Value]]
-    """
-    """
-    assert token.source is not None
-    val = token.source[token.start:token.start + token.length]
-    return make_constant(processor, searcher, bytecode, val)
 
 
 @expose
@@ -661,10 +651,8 @@ def parse_variable(processor, composer, searcher, bytecode, error_message):
     processor = consume(processor, searcher, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
     processor, composer = declare_variable(processor, composer, searcher)
 
-    if composer.scope_depth > 0:
-        return processor, 0
-
-    return identifier_constant(processor, searcher, bytecode, processor.previous)
+    assert composer.scope_depth > 0
+    return processor, 0
 
 
 @expose
