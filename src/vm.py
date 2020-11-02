@@ -8,7 +8,7 @@ import value
 
 STACK_MAX = 8
 
-InterpretResultTuple = Tuple["InterpretResult", Optional[value.Value], Optional[chunk.OpCode]]
+InterpretResultTuple = Tuple["InterpretResult", Optional[chunk.OpCode], Optional[List[value.Value]]]
 
 
 class InterpretResult(enum.Enum):
@@ -26,6 +26,7 @@ class VM():
         self.stack = None  # type: Optional[List[Optional[value.Value]]]
         self.stack_top = 0
         self.counter = 0
+        self.output = None  # type: Optional[List[value.Value]]
 
 
 def reset_stack(emulator):
@@ -34,6 +35,8 @@ def reset_stack(emulator):
     indicating stack is empty."""
     emulator.stack = [None] * STACK_MAX
     emulator.stack_top = 0
+    emulator.output = []
+
     return emulator
 
 
@@ -175,12 +178,14 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_PRINT:
             emulator, constant = pop(emulator)
+            print(constant)
             assert isinstance(instruction, chunk.OpCode)
             opcode = instruction
-            print(constant)
+            assert emulator.output is not None
+            emulator.output.append(constant)
 
         elif instruction == chunk.OpCode.OP_RETURN:
-            return InterpretResult.INTERPRET_OK, constant, opcode
+            return InterpretResult.INTERPRET_OK, opcode, emulator.output
 
 
 def interpret(emulator, source, debug_level):
