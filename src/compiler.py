@@ -189,7 +189,6 @@ def consume(processor, searcher, token_type, message):
     return error_at_current(processor, searcher, message)
 
 
-@expose
 def check(processor, token_type):
     # type: (Parser, scanner.TokenType) -> bool
     """Checks current_token has given type."""
@@ -197,7 +196,6 @@ def check(processor, token_type):
     return processor.current.token_type == token_type
 
 
-@expose
 def match(processor, searcher, token_type):
     # type: (Parser, scanner.Scanner, scanner.TokenType) -> Tuple[Parser, bool]
     """If current token has given type, consume token and return True."""
@@ -326,6 +324,7 @@ def expression(processor, searcher, composer, bytecode):
     return parse_precedence(processor, searcher, composer, bytecode, Precedence.PREC_ASSIGNMENT)
 
 
+@expose
 def variable_declaration(processor, searcher, composer, bytecode):
     # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """
@@ -333,10 +332,8 @@ def variable_declaration(processor, searcher, composer, bytecode):
     processor, _ = parse_variable(processor, searcher, composer, bytecode, "Expect variable name.")
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
-    if condition:
-        processor, bytecode = expression(processor, searcher, composer, bytecode)
-    else:
-        processor, bytecode = emit_byte(processor, bytecode, chunk.OpCode.OP_NIL)
+    assert condition
+    processor, bytecode = expression(processor, searcher, composer, bytecode)
 
     processor = consume(
         processor,
@@ -517,12 +514,13 @@ def named_variable(processor, searcher, composer, bytecode, token):
     """
     """
     processor, arg = resolve_local(processor, searcher, composer, token)
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
-    if match(processor, searcher, scanner.TokenType.TOKEN_EQUAL):
+    if condition:
         processor, bytecode = expression(processor, searcher, composer, bytecode)
         return emit_bytes(processor, bytecode, chunk.OpCode.OP_SET_LOCAL, arg)
-    else:
-        return emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
+
+    return emit_bytes(processor, bytecode, chunk.OpCode.OP_GET_LOCAL, arg)
 
 
     # @expose
@@ -685,6 +683,7 @@ def resolve_local(processor, searcher, composer, token):
     #     return -1
 
 
+@expose
 def add_local(processor, searcher, composer, token):
     # type: (Parser, scanner.Scanner, Compiler, scanner.Token) -> Tuple[Parser, Compiler]
     """
@@ -719,6 +718,7 @@ def add_local(processor, searcher, composer, token):
     #     local.depth = -1
 
 
+@expose
 def declare_variable(processor, searcher, composer):
     # type: (Parser, scanner.Scanner, Compiler) -> Tuple[Parser, Compiler]
     """
@@ -747,6 +747,7 @@ def declare_variable(processor, searcher, composer):
     return add_local(processor, searcher, composer, token)
 
 
+@expose
 def parse_variable(processor, searcher, composer, bytecode, error_message):
     # type: (Parser, scanner.Scanner, Compiler, chunk.Chunk, str) -> Tuple[Parser, Optional[value.Value]]
     """
@@ -760,6 +761,7 @@ def parse_variable(processor, searcher, composer, bytecode, error_message):
     return identifier_constant(processor, searcher, bytecode, processor.previous)
 
 
+@expose
 def mark_initialized(processor, composer):
     # type: (Parser, Compiler) -> Compiler
     """
@@ -782,6 +784,7 @@ def mark_initialized(processor, composer):
     #     self.composer.locals[local_count].depth = self.composer.scope_depth
 
 
+@expose
 def define_variable(processor, composer):
     # type: (Parser, Compiler) -> Compiler
     """

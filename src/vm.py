@@ -8,7 +8,6 @@ import value
 
 STACK_MAX = 8
 
-Operation = str
 InterpretResultTuple = Tuple["InterpretResult", Optional[value.Value], Optional[chunk.OpCode]]
 
 
@@ -122,7 +121,7 @@ def read_constant(emulator):
 
 
 def binary_op(emulator, op):
-    # type: (VM, Operation) -> VM
+    # type: (VM, str) -> VM
     """Execute binary operation on two items at the top of the stack."""
     while True:
         emulator, b = pop(emulator)
@@ -201,7 +200,7 @@ def interpret(emulator, source, debug_level):
         return InterpretResult.INTERPRET_COMPILE_ERROR, None, None
 
     emulator.bytecode = bytecode
-    result_tuple = run(emulator)
+    result = run(emulator)
 
     bytecode = chunk.free_chunk(bytecode)
-    return result_tuple
+    return result
