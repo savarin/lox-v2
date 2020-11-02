@@ -1,6 +1,6 @@
 import enum
 import functools
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 import chunk
 import debug
@@ -63,7 +63,7 @@ class Precedence(enum.Enum):
 
 class ParseRule():
     def __init__(self, prefix, infix, precedence):
-        #
+        # type: (Optional[Callable], Optional[Callable], Precedence) -> None
         """Wrapper for precedence rule."""
         self.prefix = prefix
         self.infix = infix
@@ -74,7 +74,7 @@ class Local():
     def __init__(self):
         # type: () -> None
         """Stores token and state of lexical scope."""
-        self.token = None
+        self.token = None  # type: Optional[scanner.Token]
         self.depth = 0
 
 
@@ -82,7 +82,7 @@ class Compiler():
     def __init__(self):
         # type: () -> None
         """Stores local variables, count and scope depth."""
-        self.locals = None
+        self.locals = None  # type: Optional[List[Local]]
         self.local_count = 0
         self.scope_depth = 0
 
@@ -272,6 +272,7 @@ def end_scope(processor, composer, bytecode):
     while True:
         is_positive = composer.local_count > 0
 
+        assert composer.locals is not None
         depth = composer.locals[composer.local_count - 1].depth
         is_over_scope = depth > composer.scope_depth
 
@@ -319,28 +320,6 @@ def expression(processor, composer, searcher, bytecode):
 
 
 @expose
-def variable_declaration(processor, composer, searcher, bytecode):
-    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
-    """Declare variable when corresponding token matched."""
-    processor, _ = parse_variable(processor, composer, searcher, bytecode, "Expect variable name.")
-    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
-
-    assert condition
-    processor, bytecode = expression(processor, composer, searcher, bytecode)
-
-    processor = consume(
-        processor,
-        searcher,
-        scanner.TokenType.TOKEN_SEMICOLON,
-        "Expect ';' after variable declaration.",
-    )
-
-    composer = define_variable(processor, composer)
-
-    return processor, composer, bytecode
-
-
-@expose
 def block(processor, composer, searcher, bytecode):
     # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """Compile block within scope."""
@@ -359,6 +338,28 @@ def block(processor, composer, searcher, bytecode):
         scanner.TokenType.TOKEN_RIGHT_BRACE,
         "Expect '}' after block.",
     )
+
+    return processor, composer, bytecode
+
+
+@expose
+def variable_declaration(processor, composer, searcher, bytecode):
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
+    """Declare variable when corresponding token matched."""
+    processor, _ = parse_variable(processor, composer, searcher, bytecode, "Expect variable name.")
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
+
+    assert condition
+    processor, bytecode = expression(processor, composer, searcher, bytecode)
+
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_SEMICOLON,
+        "Expect ';' after variable declaration.",
+    )
+
+    composer = define_variable(processor, composer)
 
     return processor, composer, bytecode
 
@@ -552,6 +553,7 @@ def parse_precedence(processor, composer, searcher, bytecode, precedence):
         assert processor.previous is not None
         infix_rule = get_rule(processor.previous.token_type).infix
 
+        assert infix_rule is not None
         processor, bytecode = infix_rule(processor, composer, searcher, bytecode)
 
     return processor, bytecode
@@ -571,6 +573,7 @@ def resolve_local(processor, composer, searcher, token):
     # type: (Parser, Compiler, scanner.Scanner, scanner.Token) -> Tuple[Parser, int]
     """Find last declared variable with given identifier."""
     for i in range(composer.local_count - 1, -1, -1):
+        assert composer.locals is not None
         local = composer.locals[i]
 
         if identifiers_equal(token, local.token):
@@ -593,6 +596,7 @@ def add_local(processor, composer, searcher, token):
     if composer.local_count == UINT8_COUNT:
         return error(processor, searcher, "Too many local variables in function."), composer
 
+    assert composer.locals is not None
     local = composer.locals[composer.local_count]
     composer.local_count += 1
 
@@ -612,6 +616,7 @@ def declare_variable(processor, composer, searcher):
     token = processor.previous
 
     for i in range(composer.local_count - 1, -1, -1):
+        assert composer.locals is not None
         local = composer.locals[i]
 
         if local.depth != -1 and local.depth < composer.scope_depth:
@@ -647,6 +652,8 @@ def mark_initialized(processor, composer):
     """Mark local variable as initialized once variable set in compiler."""
     assert composer.scope_depth > 0
     local_count = composer.local_count - 1
+
+    assert composer.locals is not None
     composer.locals[local_count].depth = composer.scope_depth
 
     return composer
