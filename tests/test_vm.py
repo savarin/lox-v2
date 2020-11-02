@@ -30,7 +30,7 @@ def test_manual_init():
     emulator.bytecode = bytecode
     result = vm.run(emulator)
     assert result[0] == vm.InterpretResult.INTERPRET_OK
-    assert result[1] == chunk.OpCode.OP_PRINT
+    assert result[1] == chunk.OpCode.OP_RETURN
     assert result[2] == [-1.0]
 
     emulator = vm.free_vm(emulator)
@@ -53,7 +53,7 @@ def test_basic_add():
     interpret(
         source="print 1 + 1;",
         result=vm.InterpretResult.INTERPRET_OK,
-        opcode=chunk.OpCode.OP_PRINT,
+        opcode=chunk.OpCode.OP_RETURN,
         output=[2],
     )
 
@@ -63,7 +63,7 @@ def test_basic_subtract():
     interpret(
         source="print 2 - 1;",
         result=vm.InterpretResult.INTERPRET_OK,
-        opcode=chunk.OpCode.OP_PRINT,
+        opcode=chunk.OpCode.OP_RETURN,
         output=[1],
     )
 
@@ -73,7 +73,7 @@ def test_basic_multiply():
     interpret(
         source="print 3 * 3;",
         result=vm.InterpretResult.INTERPRET_OK,
-        opcode=chunk.OpCode.OP_PRINT,
+        opcode=chunk.OpCode.OP_RETURN,
         output=[9],
     )
 
@@ -83,7 +83,7 @@ def test_basic_divide():
     interpret(
         source="print 9 / 3;",
         result=vm.InterpretResult.INTERPRET_OK,
-        opcode=chunk.OpCode.OP_PRINT,
+        opcode=chunk.OpCode.OP_RETURN,
         output=[3],
     )
 
@@ -93,6 +93,118 @@ def test_basic_negate():
     interpret(
         source="print -1;",
         result=vm.InterpretResult.INTERPRET_OK,
-        opcode=chunk.OpCode.OP_PRINT,
+        opcode=chunk.OpCode.OP_RETURN,
         output=[-1],
+    )
+
+
+def test_basic_scope():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            print 1;
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_OK,
+        opcode=chunk.OpCode.OP_RETURN,
+        output=[1],
+    )
+
+
+def test_single_variable_single_scope():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            let a = 1;
+            print a;
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_OK,
+        opcode=chunk.OpCode.OP_RETURN,
+        output=[1],
+    )
+
+
+def test_single_variable_multiple_scope():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            let a = 1;
+            print a;
+
+            {
+                a = 2;
+                print a;
+            }
+
+            print a;
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_OK,
+        opcode=chunk.OpCode.OP_RETURN,
+        output=[1, 2, 2],
+    )
+
+
+def test_multiple_variable_single_scope():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            let a = 1;
+            print a;
+
+            let b = 2;
+            print b;
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_OK,
+        opcode=chunk.OpCode.OP_RETURN,
+        output=[1, 2],
+    )
+
+
+def test_multiple_variable_multiple_scope():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            let a = 1;
+            print a;
+
+            {
+                let b = 2;
+                print b;
+            }
+
+            print a;
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_OK,
+        opcode=chunk.OpCode.OP_RETURN,
+        output=[1, 2, 1],
+    )
+
+
+def test_multiple_variable_scope_error():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            let a = 1;
+            print a;
+
+            {
+                let b = 2;
+            }
+
+            print b;
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_RUNTIME_ERROR,
+        opcode=chunk.OpCode.OP_GET_LOCAL,
+        output=[1],
     )

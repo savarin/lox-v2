@@ -132,8 +132,6 @@ def binary_op(emulator, op):
 def run(emulator):
     # type: (VM) -> InterpretResultTuple
     """Executes instructions in bytecode."""
-    constant, opcode = None, None
-
     while True:
         emulator, instruction = read_byte(emulator)
 
@@ -149,7 +147,8 @@ def run(emulator):
             assert isinstance(slot, int)
             assert emulator.stack is not None
             val = emulator.stack[slot]
-            assert val is not None
+            if val is None:
+                break
             emulator = push(emulator, val)
 
         elif instruction == chunk.OpCode.OP_SET_LOCAL:
@@ -179,13 +178,15 @@ def run(emulator):
         elif instruction == chunk.OpCode.OP_PRINT:
             emulator, constant = pop(emulator)
             print(constant)
-            assert isinstance(instruction, chunk.OpCode)
-            opcode = instruction
             assert emulator.output is not None
             emulator.output.append(constant)
 
         elif instruction == chunk.OpCode.OP_RETURN:
-            return InterpretResult.INTERPRET_OK, opcode, emulator.output
+            assert isinstance(instruction, chunk.OpCode)
+            return InterpretResult.INTERPRET_OK, instruction, emulator.output
+
+    assert isinstance(instruction, chunk.OpCode)
+    return InterpretResult.INTERPRET_RUNTIME_ERROR, instruction, emulator.output
 
 
 def interpret(emulator, source, debug_level):
