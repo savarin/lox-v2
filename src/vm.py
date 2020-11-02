@@ -123,10 +123,10 @@ def read_constant(emulator):
 def binary_op(emulator, op):
     # type: (VM, str) -> VM
     """Execute binary operation on two items at the top of the stack."""
-    while True:
-        emulator, b = pop(emulator)
-        emulator, a = pop(emulator)
-        return push(emulator, eval("a {} b".format(op)))
+    emulator, b = pop(emulator)
+    emulator, a = pop(emulator)
+
+    return push(emulator, eval("a {} b".format(op)))
 
 
 def run(emulator):
@@ -193,10 +193,10 @@ def interpret(emulator, source, debug_level):
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
     bytecode = chunk.init_chunk()
+    bytecode, condition = compiler.compile(source, bytecode, debug_level)
 
-    if not compiler.compile(source, bytecode, debug_level):
+    if not condition:
         bytecode = chunk.free_chunk(bytecode)
-
         return InterpretResult.INTERPRET_COMPILE_ERROR, None, None
 
     emulator.bytecode = bytecode

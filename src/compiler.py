@@ -713,7 +713,7 @@ def get_rule(token_type):
 
 
 def compile(source, bytecode, debug_level):
-    # type: (scanner.Source, chunk.Chunk, int) -> bool
+    # type: (scanner.Source, chunk.Chunk, int) -> Tuple[chunk.Chunk, bool]
     """Compiles source code into tokens."""
     searcher = scanner.init_scanner(source)
     processor = init_parser(debug_level)
@@ -737,4 +737,4 @@ def compile(source, bytecode, debug_level):
     if debug_level >= 1:
         debug.disassemble_chunk(bytecode, "script")
 
-    return not processor.had_error
+    return bytecode, not processor.had_error
