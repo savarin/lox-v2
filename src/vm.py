@@ -80,8 +80,7 @@ def pop(emulator):
 
 def peek(emulator, distance):
     # type: (VM, int) -> Tuple[VM, value.Value]
-    """
-    """
+    """Reads value but does not pop it."""
     assert emulator.stack is not None
     val = emulator.stack[emulator.stack_top - 1 - distance]
 

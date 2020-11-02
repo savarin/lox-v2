@@ -72,18 +72,16 @@ class ParseRule():
 
 class Local():
     def __init__(self):
-        #
-        """
-        """
+        # type: () -> None
+        """Stores token and state of lexical scope."""
         self.token = None
         self.depth = 0
 
 
 class Compiler():
     def __init__(self):
-        #
-        """
-        """
+        # type: () -> None
+        """Stores local variables, count and scope depth."""
         self.locals = None
         self.local_count = 0
         self.scope_depth = 0
@@ -91,8 +89,7 @@ class Compiler():
 
 def init_compiler():
     # type: () -> Compiler
-    """
-    """
+    """Initialize new compiler."""
     composer = Compiler()
     composer.locals = [Local() for _ in range(UINT8_COUNT)]
 
@@ -261,8 +258,7 @@ def end_compiler(processor, bytecode):
 @expose
 def begin_scope(processor, composer):
     # type: (Parser, Compiler) -> Compiler
-    """
-    """
+    """Enter a new local scope."""
     composer.scope_depth += 1
     return composer
 
@@ -270,8 +266,7 @@ def begin_scope(processor, composer):
 @expose
 def end_scope(processor, composer, bytecode):
     # type: (Parser, Compiler, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
-    """
-    """
+    """Exit local scope."""
     composer.scope_depth -= 1
 
     while True:
@@ -326,8 +321,7 @@ def expression(processor, composer, searcher, bytecode):
 @expose
 def variable_declaration(processor, composer, searcher, bytecode):
     # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
-    """
-    """
+    """Declare variable when corresponding token matched."""
     processor, _ = parse_variable(processor, composer, searcher, bytecode, "Expect variable name.")
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
@@ -349,8 +343,7 @@ def variable_declaration(processor, composer, searcher, bytecode):
 @expose
 def block(processor, composer, searcher, bytecode):
     # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
-    """
-    """
+    """Compile block within scope."""
     while True:
         is_right_brace = check(processor, scanner.TokenType.TOKEN_RIGHT_BRACE)
         is_eof = check(processor, scanner.TokenType.TOKEN_EOF)
@@ -495,8 +488,7 @@ def number(processor, composer, searcher, bytecode):
 @expose
 def named_variable(processor, composer, searcher, bytecode, token):
     #
-    """
-    """
+    """ Set local variable."""
     processor, arg = resolve_local(processor, composer, searcher, token)
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
@@ -510,8 +502,7 @@ def named_variable(processor, composer, searcher, bytecode, token):
 @expose
 def variable(processor, composer, searcher, bytecode):
     # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
-    """
-    """
+    """Append variable to bytecode."""
     return named_variable(processor, composer, searcher, bytecode, processor.previous)
 
 
@@ -568,8 +559,7 @@ def parse_precedence(processor, composer, searcher, bytecode, precedence):
 
 def identifiers_equal(a, b):
     # type: (Optional[scanner.Token], Optional[scanner.Token]) -> bool
-    """
-    """
+    """Checks if two tokens are equal."""
     if not a or not b or a.length != b.length:
         return False
 
@@ -579,8 +569,7 @@ def identifiers_equal(a, b):
 @expose
 def resolve_local(processor, composer, searcher, token):
     # type: (Parser, Compiler, scanner.Scanner, scanner.Token) -> Tuple[Parser, int]
-    """
-    """
+    """Find last declared variable with given identifier."""
     for i in range(composer.local_count - 1, -1, -1):
         local = composer.locals[i]
 
@@ -600,8 +589,7 @@ def resolve_local(processor, composer, searcher, token):
 @expose
 def add_local(processor, composer, searcher, token):
     # type: (Parser, Compiler, scanner.Scanner, scanner.Token) -> Tuple[Parser, Compiler]
-    """
-    """
+    """Include local variable to compiler's list in the current scope."""
     if composer.local_count == UINT8_COUNT:
         return error(processor, searcher, "Too many local variables in function."), composer
 
@@ -617,8 +605,7 @@ def add_local(processor, composer, searcher, token):
 @expose
 def declare_variable(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
-    """
-    """
+    """Record the existence of local variable in the compiler."""
     if composer.scope_depth == 0:
         return processor, composer
 
@@ -646,8 +633,7 @@ def declare_variable(processor, composer, searcher):
 @expose
 def parse_variable(processor, composer, searcher, bytecode, error_message):
     # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk, str) -> Tuple[Parser, Optional[value.Value]]
-    """
-    """
+    """Checks next token in local variable declaration is an identifier token."""
     processor = consume(processor, searcher, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
     processor, composer = declare_variable(processor, composer, searcher)
 
@@ -658,8 +644,7 @@ def parse_variable(processor, composer, searcher, bytecode, error_message):
 @expose
 def mark_initialized(processor, composer):
     # type: (Parser, Compiler) -> Compiler
-    """
-    """
+    """Mark local variable as initialized once variable set in compiler."""
     assert composer.scope_depth > 0
     local_count = composer.local_count - 1
     composer.locals[local_count].depth = composer.scope_depth
@@ -670,8 +655,7 @@ def mark_initialized(processor, composer):
 @expose
 def define_variable(processor, composer):
     # type: (Parser, Compiler) -> Compiler
-    """
-    """
+    """Emit code to store local variable."""
     assert composer.scope_depth > 0
     return mark_initialized(processor, composer)
 
