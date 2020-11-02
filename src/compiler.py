@@ -477,7 +477,7 @@ def statement(processor, searcher, composer, bytecode):
     if condition:
         composer = begin_scope(processor, composer)
         processor, composer, bytecode = block(processor, searcher, composer, bytecode)
-        processor, composer, bytecode = end_scope(processor, composer, bytecode)
+        return end_scope(processor, composer, bytecode)
 
     processor, bytecode = expression_statement(processor, searcher, composer, bytecode)
     return processor, composer, bytecode
