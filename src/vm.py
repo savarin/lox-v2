@@ -69,7 +69,6 @@ def push(emulator, val):
 def pop(emulator):
     # type: (VM) -> Tuple[VM, value.Value]
     """Pop most recently pushed value."""
-    assert emulator.stack_top is not None
     emulator.stack_top -= 1
 
     assert emulator.stack is not None
@@ -93,7 +92,6 @@ def peek(emulator, distance):
 def read_byte(emulator):
     # type: (VM) -> Tuple[VM, chunk.Byte]
     """Reads byte at current instruction pointer and advances pointer."""
-    assert emulator.ip is not None
     emulator.ip += 1
 
     assert emulator.bytecode is not None
@@ -146,19 +144,18 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_GET_LOCAL:
             emulator, slot = read_byte(emulator)
-            assert emulator.stack is not None
             assert isinstance(slot, int)
+            assert emulator.stack is not None
             val = emulator.stack[slot]
             assert val is not None
             emulator = push(emulator, val)
 
         elif instruction == chunk.OpCode.OP_SET_LOCAL:
             emulator, slot = read_byte(emulator)
-            assert emulator.stack is not None
-            assert isinstance(slot, int)
-            val = emulator.stack[slot]
-            assert val is not None
             emulator, val = peek(emulator, 0)
+            assert isinstance(slot, int)
+            assert emulator.stack is not None
+            emulator.stack[slot] = val
 
         elif instruction == chunk.OpCode.OP_ADD:
             emulator = binary_op(emulator, "+")
@@ -184,7 +181,6 @@ def run(emulator):
             print(constant)
 
         elif instruction == chunk.OpCode.OP_RETURN:
-            assert constant is not None
             return InterpretResult.INTERPRET_OK, constant, opcode
 
 
