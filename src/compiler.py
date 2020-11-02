@@ -75,7 +75,7 @@ class Local():
         #
         """
         """
-        self.name = None
+        self.token = None
         self.depth = 0
 
 
@@ -595,7 +595,7 @@ def resolve_local(processor, searcher, composer, token):
     for i in range(composer.local_count - 1, -1, -1):
         local = composer.locals[i]
 
-        if identifiers_equal(token, local.name):
+        if identifiers_equal(token, local.token):
             if local.depth == -1:
                 processor = error(
                     processor,
@@ -619,7 +619,7 @@ def add_local(processor, searcher, composer, token):
     local = composer.locals[composer.local_count]
     composer.local_count += 1
 
-    local.name = token
+    local.token = token
     local.depth = composer.scope_depth
 
     return processor, composer
@@ -641,7 +641,7 @@ def declare_variable(processor, searcher, composer):
         if local.depth != -1 and local.depth < composer.scope_depth:
             break
 
-        if identifiers_equal(token, local.name):
+        if identifiers_equal(token, local.token):
             processor = error(
                 processor,
                 searcher,
