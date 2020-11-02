@@ -90,12 +90,11 @@ class Compiler():
 
 
 def init_compiler():
-    #
+    # type: () -> Compiler
     """
     """
     composer = Compiler()
     composer.locals = [Local() for _ in range(UINT8_COUNT)]
-    composer.local_count = 1
 
     return composer
 
@@ -568,7 +567,7 @@ def parse_precedence(processor, composer, searcher, bytecode, precedence):
 
 
 def identifiers_equal(a, b):
-    #
+    # type: (scanner.Token, scanner.Token) -> bool
     """
     """
     if not a or not b or a.length != b.length:
