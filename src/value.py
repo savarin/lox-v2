@@ -21,6 +21,18 @@ def init_value_array():
     return ValueArray()
 
 
+def free_value_array(value_array):
+    # type: (ValueArray) -> ValueArray
+    """Deallocates memory and calls init_value_array to leave value array in a
+    well-defined empty state."""
+    assert value_array.values is not None
+    value_array.values = memory.free_array(value_array.values, value_array.capacity)
+    value_array.count = 0
+    value_array.capacity = 0
+
+    return init_value_array()
+
+
 def write_value_array(value_array, val):
     # type: (ValueArray, Value) -> ValueArray
     """Append value to the end of the value array."""
@@ -39,18 +51,6 @@ def write_value_array(value_array, val):
     value_array.count += 1
 
     return value_array
-
-
-def free_value_array(value_array):
-    # type: (ValueArray) -> ValueArray
-    """Deallocates memory and calls init_value_array to leave value array in a
-    well-defined empty state."""
-    assert value_array.values is not None
-    value_array.values = memory.free_array(value_array.values, value_array.capacity)
-    value_array.count = 0
-    value_array.capacity = 0
-
-    return init_value_array()
 
 
 def print_value(val):

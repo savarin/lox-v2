@@ -46,6 +46,24 @@ def init_chunk():
     return bytecode
 
 
+def free_chunk(bytecode):
+    # type: (Chunk) -> Chunk
+    """Deallocates memory and calls init_chunk to leave chunk in a well-defined
+    empty state."""
+    assert bytecode.code is not None
+    assert bytecode.lines is not None
+    bytecode.code = memory.free_array(bytecode.code, bytecode.capacity)
+    bytecode.lines = memory.free_array(bytecode.lines, bytecode.capacity)
+
+    assert bytecode.constants is not None
+    if bytecode.constants.values is not None:
+        bytecode.constants = value.free_value_array(bytecode.constants)
+        bytecode.count = 0
+        bytecode.capacity = 0
+
+    return init_chunk()
+
+
 def write_chunk(bytecode, byte, line):
     # type: (Chunk, Byte, Line) -> Chunk
     """Append byte to the end of the chunk."""
@@ -71,21 +89,3 @@ def add_constant(bytecode, val):
     assert bytecode.constants is not None
     bytecode.constants = value.write_value_array(bytecode.constants, val)
     return bytecode, bytecode.constants.count - 1
-
-
-def free_chunk(bytecode):
-    # type: (Chunk) -> Chunk
-    """Deallocates memory and calls init_chunk to leave chunk in a well-defined
-    empty state."""
-    assert bytecode.code is not None
-    assert bytecode.lines is not None
-    bytecode.code = memory.free_array(bytecode.code, bytecode.capacity)
-    bytecode.lines = memory.free_array(bytecode.lines, bytecode.capacity)
-
-    assert bytecode.constants is not None
-    if bytecode.constants.values is not None:
-        bytecode.constants = value.free_value_array(bytecode.constants)
-        bytecode.count = 0
-        bytecode.capacity = 0
-
-    return init_chunk()
