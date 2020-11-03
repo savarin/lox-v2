@@ -185,6 +185,7 @@ def consume(processor, searcher, token_type, message):
     return error_at_current(processor, searcher, message)
 
 
+@expose
 def check(processor, token_type):
     # type: (Parser, scanner.TokenType) -> bool
     """Checks current_token has given type."""
@@ -192,6 +193,7 @@ def check(processor, token_type):
     return processor.current.token_type == token_type
 
 
+@expose
 def match(processor, searcher, token_type):
     # type: (Parser, scanner.Scanner, scanner.TokenType) -> Tuple[Parser, bool]
     """If current token has given type, consume token and return True."""
@@ -346,7 +348,7 @@ def block(processor, composer, searcher, bytecode):
 def variable_declaration(processor, composer, searcher, bytecode):
     # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk) -> Tuple[Parser, Compiler, chunk.Chunk]
     """Declare variable when corresponding token matched."""
-    processor, _ = parse_variable(processor, composer, searcher, bytecode, "Expect variable name.")
+    processor = parse_variable(processor, composer, searcher, bytecode, "Expect variable name.")
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
 
     assert condition
@@ -541,7 +543,7 @@ def parse_precedence(processor, composer, searcher, bytecode, precedence):
     prefix_rule = get_rule(processor.previous.token_type).prefix
 
     if prefix_rule is None:
-        error(processor, searcher, "Expect expression")
+        processor = error(processor, searcher, "Expect expression")
         return processor, bytecode
 
     processor, bytecode = prefix_rule(processor, composer, searcher, bytecode)
@@ -634,13 +636,13 @@ def declare_variable(processor, composer, searcher):
 
 @expose
 def parse_variable(processor, composer, searcher, bytecode, error_message):
-    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk, str) -> Tuple[Parser, Optional[value.Value]]
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk, str) -> Parser
     """Checks next token in local variable declaration is an identifier token."""
     processor = consume(processor, searcher, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
     processor, composer = declare_variable(processor, composer, searcher)
 
     assert composer.scope_depth > 0
-    return processor, 0
+    return processor
 
 
 @expose
