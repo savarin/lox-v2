@@ -6,6 +6,7 @@ import compiler
 import scanner
 import value
 
+FRAMES_MAX = 8
 STACK_MAX = 8
 
 InterpretResultTuple = Tuple["InterpretResult", Optional[chunk.OpCode], Optional[List[value.Value]]]
@@ -17,12 +18,24 @@ class InterpretResult(enum.Enum):
     INTERPRET_RUNTIME_ERROR = "INTERPRET_RUNTIME_ERROR"
 
 
+class CallFrame():
+    def __init__(self):
+        #
+        """
+        """
+        self.function = None
+        self.ip = 0
+        self.slots = None
+
+
 class VM():
     def __init__(self):
         # type: () -> None
         """Stores bytecode and current instruction pointer."""
-        self.bytecode = None  # type: Optional[chunk.Chunk]
-        self.ip = 0
+        self.frames = None
+        self.frame_count = 0
+        # self.bytecode = None  # type: Optional[chunk.Chunk]
+        # self.ip = 0
         self.stack = None  # type: Optional[List[Optional[value.Value]]]
         self.stack_top = 0
         self.counter = 0
@@ -33,6 +46,8 @@ def reset_stack(emulator):
     # type: (VM) -> VM
     """Reset VM by moving stack_top to point to beginning of array, thus
     indicating stack is empty."""
+    emulator.frames = [CallFrame() for _ in range(FRAMES_MAX)]
+    emulator.frame_count = 0
     emulator.stack = [None] * STACK_MAX
     emulator.stack_top = 0
     emulator.output = []
@@ -51,9 +66,9 @@ def init_vm():
 def free_vm(emulator):
     # type: (VM) -> VM
     """Deallocates memory in VM."""
-    assert emulator.bytecode is not None
-    if emulator.bytecode.code is not None:
-        emulator.bytecode = chunk.free_chunk(emulator.bytecode)
+    # assert emulator.bytecode is not None
+    # if emulator.bytecode.code is not None:
+    #     emulator.bytecode = chunk.free_chunk(emulator.bytecode)
 
     emulator.ip = 0
     return reset_stack(emulator)
@@ -94,11 +109,17 @@ def peek(emulator, distance):
 def read_byte(emulator):
     # type: (VM) -> Tuple[VM, chunk.Byte]
     """Reads byte at current instruction pointer and advances pointer."""
-    emulator.ip += 1
+    frame = emulator.frames[emulator.frame_count - 1]
+    bytecode = frame.function.bytecode    
 
-    assert emulator.bytecode is not None
-    assert emulator.bytecode.code is not None
-    instruction = emulator.bytecode.code[emulator.ip - 1]
+    frame.ip += 1
+    emulator.frames[emulator.frame_count - 1] = frame
+    # emulator.ip += 1
+
+    # assert emulator.bytecode is not None
+    # assert emulator.bytecode.code is not None
+    # instruction = emulator.bytecode.code[emulator.ip - 1]
+    instruction = bytecode.code[frame.ip - 1]
 
     assert instruction is not None
     return emulator, instruction
@@ -108,13 +129,17 @@ def read_constant(emulator):
     # type: (VM) -> Tuple[VM, value.Value]
     """Reads next byte from bytecode, treats result as index and looks up
     corresponding location in constants table."""
+    frame = emulator.frames[emulator.frame_count - 1]
+    bytecode = frame.function.bytecode
+
     emulator, offset = read_byte(emulator)
 
-    assert emulator.bytecode is not None
-    assert emulator.bytecode.constants is not None
-    assert emulator.bytecode.constants.values is not None
-    assert isinstance(offset, int)
-    constant = emulator.bytecode.constants.values[offset]
+    # assert emulator.bytecode is not None
+    # assert emulator.bytecode.constants is not None
+    # assert emulator.bytecode.constants.values is not None
+    # assert isinstance(offset, int)
+    # constant = emulator.bytecode.constants.values[offset]
+    constant = bytecode.constants.values[offset]
 
     assert constant is not None
     return emulator, constant
@@ -146,7 +171,10 @@ def run(emulator):
             emulator, slot = read_byte(emulator)
             assert isinstance(slot, int)
             assert emulator.stack is not None
-            val = emulator.stack[slot]
+
+            frame = emulator.frames[emulator.frame_count - 1]
+            val = frame.slots[slot]
+            # val = emulator.stack[slot]
             if val is None:
                 break
             emulator = push(emulator, val)
@@ -156,7 +184,11 @@ def run(emulator):
             emulator, val = peek(emulator, 0)
             assert isinstance(slot, int)
             assert emulator.stack is not None
-            emulator.stack[slot] = val
+
+            frame = emulator.frames[emulator.frame_count - 1]
+            frame.slots[slot] = val
+            emulator.frames[emulator.frame_count - 1] = frame
+            # emulator.stack[slot] = val
 
         elif instruction == chunk.OpCode.OP_ADD:
             emulator = binary_op(emulator, "+")
@@ -193,15 +225,58 @@ def interpret(emulator, source, debug_level):
     # type: (VM, scanner.Source, int) -> InterpretResultTuple
     """Implement instructions in bytecode."""
     # TODO: Compare implementation for vm.ip in 15.1.1
-    bytecode = chunk.init_chunk()
-    bytecode, condition = compiler.compile(source, bytecode, debug_level)
+    # bytecode = chunk.init_chunk()
+    # bytecode, condition = compiler.compile(source, bytecode, debug_level)
 
-    if not condition:
-        bytecode = chunk.free_chunk(bytecode)
-        return InterpretResult.INTERPRET_COMPILE_ERROR, None, None
+    # if not condition:
+    #     bytecode = chunk.free_chunk(bytecode)
+    #     return InterpretResult.INTERPRET_COMPILE_ERROR, None, None
 
-    emulator.bytecode = bytecode
+    # emulator.bytecode = bytecode
+
+    # bytecode = chunk.init_chunk()
+    # function = compiler.compile(source, bytecode, debug_level)
+    function = compiler.compile(source, debug_level)
+
+    if function is None:
+        breakpoint()
+
+    # emulator = push(emulator, function)
+
+    frame = emulator.frames[emulator.frame_count]
+    emulator.frame_count += 1
+
+    frame.function = function
+    frame.ip = 0
+    frame.slots = emulator.stack
+
+    emulator.frames[emulator.frame_count] = frame
+
     result = run(emulator)
 
-    bytecode = chunk.free_chunk(bytecode)
+    # bytecode = chunk.free_chunk(bytecode)
     return result
+
+
+        # bytecode = chunk.Chunk()
+        # self.expose = expose
+
+        # function = compiler.compile(source, bytecode, debug_level)
+
+        # if function is None:
+        #     return InterpretResult.INTERPRET_COMPILE_ERROR
+
+        # self.push(value.obj_val(function))
+
+        # # frame = self.frames[self.frame_count]
+        # # self.frame_count += 1
+
+        # # frame.function = function
+        # # frame.ip = 0
+        # # frame.slots = self.stack
+        # self.call_value(value.obj_val(function), 0)
+
+        # return self.run()
+
+
+

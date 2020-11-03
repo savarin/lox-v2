@@ -263,6 +263,7 @@ def end_compiler(processor, composer, bytecode):
     # type: (Parser, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Implement end of expression."""
     processor, bytecode = emit_return(processor, bytecode)
+    composer.function.bytecode = bytecode
     function = composer.function
 
     return processor, bytecode, function
@@ -700,7 +701,7 @@ def get_rule(token_type):
     )
 
 
-def compile(source, bytecode, debug_level):
+def compile(source, debug_level):
     # type: (scanner.Source, chunk.Chunk, int) -> Tuple[chunk.Chunk, bool]
     """Compiles source code into tokens."""
     searcher = scanner.init_scanner(source)
@@ -718,11 +719,12 @@ def compile(source, bytecode, debug_level):
         if condition:
             break
 
-        processor, _, bytecode = declaration(processor, composer, searcher, bytecode)
+        processor, _, composer.function.bytecode = declaration(processor, composer, searcher, composer.function.bytecode)
 
-    processor, bytecode, _ = end_compiler(processor, composer, bytecode)
+    processor, composer.function.bytecode, function = end_compiler(processor, composer, composer.function.bytecode)
 
-    if debug_level >= 1:
-        debug.disassemble_chunk(bytecode, "script")
+    # if debug_level >= 1:
+    #     debug.disassemble_chunk(bytecode, "script")
 
-    return bytecode, not processor.had_error
+    return function
+    # return bytecode, not processor.had_error
