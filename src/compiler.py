@@ -83,7 +83,7 @@ class Compiler():
     def __init__(self):
         # type: () -> None
         """Stores local variables, count and scope depth."""
-        self.fun = None
+        self.fun = None  # type: Optional[function.Function]
         self.locals = None  # type: Optional[List[Local]]
         self.local_count = 0
         self.scope_depth = 0
@@ -96,9 +96,7 @@ def init_compiler():
     composer.fun = function.init_function(function.FunctionType.TYPE_SCRIPT)
     composer.locals = [Local(None, 0) for _ in range(UINT8_COUNT)]
 
-    # Compiler claims stack slot zero for use by VM, commented out to use as
-    # reference for the moment.
-    token = scanner.Token(None, 0, 0, None, 0)
+    token = scanner.Token(scanner.TokenType.TOKEN_NIL, 0, 0, None, 0)
     local = Local(token, 0)
     composer.locals[composer.local_count] = local
     composer.local_count += 1
@@ -262,11 +260,12 @@ def emit_constant(processor, searcher, bytecode, val):
 
 @expose
 def end_compiler(processor, composer, bytecode):
-    # type: (Parser, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
+    # type: (Parser, Compiler, chunk.Chunk) -> Tuple[Parser, function.Function]
     """Implement end of expression."""
     processor, bytecode = emit_return(processor, bytecode)
 
     fun = composer.fun
+    assert fun is not None
     fun.bytecode = bytecode
 
     if processor.debug_level >= 1:
@@ -708,7 +707,7 @@ def get_rule(token_type):
 
 
 def compile(source, debug_level):
-    # type: (scanner.Source, chunk.Chunk, int) -> Tuple[chunk.Chunk, bool]
+    # type: (scanner.Source, int) -> Optional[function.Function]
     """Compiles source code into tokens."""
     searcher = scanner.init_scanner(source)
     processor = init_parser(debug_level)
@@ -725,11 +724,14 @@ def compile(source, debug_level):
         if condition:
             break
 
-        processor, composer, bytecode = declaration(processor, composer, searcher, composer.fun.bytecode)
+        fun = composer.fun
+        assert fun is not None
+        processor, composer, bytecode = declaration(processor, composer, searcher, fun.bytecode)
 
     processor, fun = end_compiler(processor, composer, bytecode)
 
     if processor.had_error:
+        function.free_function(fun)
         return None
 
     return fun

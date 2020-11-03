@@ -42,4 +42,4 @@ def test_constant_chunk():
     assert bytecode.code is not None
     assert bytecode.code[2] == chunk.OpCode.OP_RETURN
 
-    bytecode = chunk.free_chunk(bytecode)
+    chunk.free_chunk(bytecode)

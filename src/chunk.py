@@ -50,14 +50,12 @@ def free_chunk(bytecode):
     empty state."""
     assert bytecode.code is not None
     assert bytecode.lines is not None
-    bytecode.code = memory.free_array(bytecode.code, bytecode.capacity)
-    bytecode.lines = memory.free_array(bytecode.lines, bytecode.capacity)
+    memory.free_array(bytecode.code, bytecode.capacity)
+    memory.free_array(bytecode.lines, bytecode.capacity)
 
     assert bytecode.constants is not None
     if bytecode.constants.values is not None:
-        bytecode.constants = value.free_value_array(bytecode.constants)
-        bytecode.count = 0
-        bytecode.capacity = 0
+        value.free_value_array(bytecode.constants)
 
     return init_chunk()
 

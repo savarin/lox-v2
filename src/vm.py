@@ -1,8 +1,9 @@
 import enum
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import chunk
 import compiler
+import function
 import scanner
 import value
 
@@ -10,6 +11,7 @@ FRAMES_MAX = 8
 STACK_MAX = 8
 
 InterpretResultTuple = Tuple["InterpretResult", Optional[chunk.OpCode], Optional[List[value.Value]]]
+StackItem = Union[value.Value, function.Function]
 
 
 class InterpretResult(enum.Enum):
@@ -32,11 +34,11 @@ class VM():
     def __init__(self):
         # type: () -> None
         """Stores bytecode and current instruction pointer."""
-        self.frames = None
+        self.frames = None  # type: Optional[List[CallFrame]]
         self.frame_count = 0
         # self.bytecode = None  # type: Optional[chunk.Chunk]
         # self.ip = 0
-        self.stack = None  # type: Optional[List[Optional[value.Value]]]
+        self.stack = None  # type: Optional[List[Optional[StackItem]]]
         self.stack_top = 0
         self.counter = 0
         self.output = None  # type: Optional[List[value.Value]]
@@ -66,22 +68,22 @@ def free_vm(emulator):
     # type: (VM) -> VM
     """Deallocates memory in VM."""
     for i in range(emulator.frame_count):
+        assert emulator.frames is not None
         frame = emulator.frames[i]
         bytecode = frame.fun.bytecode
 
         if bytecode.code is not None:
-            bytecode = chunk.free_chunk(bytecode)
+            chunk.free_chunk(bytecode)
 
     # assert emulator.bytecode is not None
     # if emulator.bytecode.code is not None:
     #     emulator.bytecode = chunk.free_chunk(emulator.bytecode)
 
-    emulator.ip = 0
     return reset_stack(emulator)
 
 
 def push(emulator, val):
-    # type: (VM, value.Value) -> VM
+    # type: (VM, StackItem) -> VM
     """Push new value to the top of the stack."""
     assert emulator.stack is not None
     emulator.stack[emulator.stack_top] = val
@@ -91,7 +93,7 @@ def push(emulator, val):
 
 
 def pop(emulator):
-    # type: (VM) -> Tuple[VM, value.Value]
+    # type: (VM) -> Tuple[VM, StackItem]
     """Pop most recently pushed value."""
     emulator.stack_top -= 1
 
@@ -103,7 +105,7 @@ def pop(emulator):
 
 
 def peek(emulator, distance):
-    # type: (VM, int) -> Tuple[VM, value.Value]
+    # type: (VM, int) -> Tuple[VM, StackItem]
     """Reads value but does not pop it."""
     assert emulator.stack is not None
     val = emulator.stack[emulator.stack_top - 1 - distance]
@@ -113,7 +115,7 @@ def peek(emulator, distance):
 
 
 def read_byte(frame):
-    # type: (VM) -> Tuple[VM, chunk.Byte]
+    # type: (CallFrame) -> Tuple[CallFrame, chunk.Byte]
     """Reads byte at current instruction pointer and advances pointer."""
     frame.ip += 1
     instruction = frame.fun.bytecode.code[frame.ip - 1]
@@ -130,13 +132,12 @@ def read_byte(frame):
 
 
 def read_constant(frame):
-    # type: (VM) -> Tuple[VM, value.Value]
+    # type: (CallFrame) -> Tuple[CallFrame, value.Value]
     """Reads next byte from bytecode, treats result as index and looks up
     corresponding location in constants table."""
     frame, offset = read_byte(frame)
     constant = frame.fun.bytecode.constants.values[offset]
     return frame, constant
-
 
     # emulator, offset = read_byte(emulator)
 
@@ -162,6 +163,7 @@ def binary_op(emulator, op):
 def run(emulator):
     # type: (VM) -> InterpretResultTuple
     """Executes instructions in bytecode."""
+    assert emulator.frames is not None
     frame = emulator.frames[emulator.frame_count - 1]
 
     while True:
@@ -175,7 +177,7 @@ def run(emulator):
             # emulator = push(emulator, constant)
 
         elif instruction == chunk.OpCode.OP_POP:
-            emulator, constant = pop(emulator)
+            emulator, _ = pop(emulator)
 
         elif instruction == chunk.OpCode.OP_GET_LOCAL:
             frame, slot = read_byte(frame)
@@ -216,15 +218,16 @@ def run(emulator):
             emulator = binary_op(emulator, "/")
 
         elif instruction == chunk.OpCode.OP_NEGATE:
-            emulator, constant = pop(emulator)
-            constant = -constant
-            emulator = push(emulator, constant)
+            emulator, val = pop(emulator)
+            assert not isinstance(val, function.Function)
+            val = -val
+            emulator = push(emulator, val)
 
         elif instruction == chunk.OpCode.OP_PRINT:
-            emulator, constant = pop(emulator)
-            print(constant)
+            emulator, val = pop(emulator)
+            assert not isinstance(val, function.Function)
             assert emulator.output is not None
-            emulator.output.append(constant)
+            emulator.output.append(val)
 
         elif instruction == chunk.OpCode.OP_RETURN:
             assert isinstance(instruction, chunk.OpCode)
@@ -241,9 +244,9 @@ def interpret(emulator, source, debug_level):
     fun = compiler.compile(source, debug_level)
 
     if fun is None:
-        fun.bytecode = chunk.free_chunk(bytecode)
         return InterpretResult.INTERPRET_COMPILE_ERROR, None, None
 
+    assert emulator.frames is not None
     frame = emulator.frames[emulator.frame_count]
     emulator.frame_count += 1
 

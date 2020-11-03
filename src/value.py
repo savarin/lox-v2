@@ -27,8 +27,6 @@ def free_value_array(value_array):
     well-defined empty state."""
     assert value_array.values is not None
     value_array.values = memory.free_array(value_array.values, value_array.capacity)
-    value_array.count = 0
-    value_array.capacity = 0
 
     return init_value_array()
 

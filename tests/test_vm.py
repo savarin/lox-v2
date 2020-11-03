@@ -31,6 +31,7 @@ def test_manual_init():
     fun.bytecode = bytecode
 
     emulator = vm.init_vm()
+    assert emulator.frames is not None
     emulator.frames[emulator.frame_count].fun = fun
     emulator.frame_count += 1
 
@@ -39,7 +40,7 @@ def test_manual_init():
     assert result[1] == chunk.OpCode.OP_RETURN
     assert result[2] == [-1.0]
 
-    emulator = vm.free_vm(emulator)
+    vm.free_vm(emulator)
 
 
 def interpret(source, result, opcode, output):
@@ -51,7 +52,7 @@ def interpret(source, result, opcode, output):
     assert result_tuple[1] == opcode
     assert result_tuple[2] == output
 
-    emulator = vm.free_vm(emulator)
+    vm.free_vm(emulator)
 
 
 def test_basic_add():

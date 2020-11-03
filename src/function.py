@@ -1,4 +1,5 @@
 import enum
+from typing import Optional
 
 import chunk
 
@@ -14,14 +15,14 @@ class Function():
     def __init__(self):
         # type: () -> None
         """Stores function bytecode with name and arity."""
-        self.function_type = None
+        self.function_type = None  # type: Optional[FunctionType]
         self.arity = 0
-        self.bytecode = None
+        self.bytecode = None  # type: Optional[chunk.Chunk]
         self.name = None
 
 
 def init_function(function_type):
-    # type: () -> Function
+    # type: (FunctionType) -> Function
     """Initialize new function."""
     fun = Function()
     fun.function_type = function_type

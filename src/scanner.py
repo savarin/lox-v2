@@ -27,6 +27,7 @@ class TokenType(enum.Enum):
 
     # Keywords
     TOKEN_FUN = "TOKEN_FUN"
+    TOKEN_NIL = "TOKEN_NIL"
     TOKEN_PRINT = "TOKEN_PRINT"
     TOKEN_RETURN = "TOKEN_RETURN"
     TOKEN_VAR = "TOKEN_VAR"
