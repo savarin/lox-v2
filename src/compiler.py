@@ -71,11 +71,11 @@ class ParseRule():
 
 
 class Local():
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, token, depth):
+        # type: (Optional[scanner.Token], int) -> None
         """Stores token and state of lexical scope."""
-        self.token = None  # type: Optional[scanner.Token]
-        self.depth = 0
+        self.token = token
+        self.depth = depth
 
 
 class Compiler():
@@ -91,7 +91,7 @@ def init_compiler():
     # type: () -> Compiler
     """Initialize new compiler."""
     composer = Compiler()
-    composer.locals = [Local() for _ in range(UINT8_COUNT)]
+    composer.locals = [Local(None, 0) for _ in range(UINT8_COUNT)]
 
     return composer
 
@@ -597,11 +597,8 @@ def add_local(processor, composer, searcher, token):
         return error(processor, searcher, "Too many local variables in function."), composer
 
     assert composer.locals is not None
-    local = composer.locals[composer.local_count]
+    composer.locals[composer.local_count] = Local(token, composer.scope_depth)
     composer.local_count += 1
-
-    local.token = token
-    local.depth = composer.scope_depth
 
     return processor, composer
 
