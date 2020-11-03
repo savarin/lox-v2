@@ -4,6 +4,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import chunk
 import debug
+import function
 import scanner
 import value
 
@@ -82,6 +83,7 @@ class Compiler():
     def __init__(self):
         # type: () -> None
         """Stores local variables, count and scope depth."""
+        self.function = None
         self.locals = None  # type: Optional[List[Local]]
         self.local_count = 0
         self.scope_depth = 0
@@ -91,6 +93,7 @@ def init_compiler():
     # type: () -> Compiler
     """Initialize new compiler."""
     composer = Compiler()
+    composer.function = function.init_function()
     composer.locals = [Local(None, 0) for _ in range(UINT8_COUNT)]
 
     return composer
