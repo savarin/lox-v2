@@ -217,6 +217,8 @@ def match(processor, searcher, token_type):
 def emit_byte(processor, composer, byte):
     # type: (Parser, Compiler, chunk.Byte) -> Tuple[Parser, Compiler]
     """Append single byte to bytecode."""
+    assert composer.fun is not None
+    assert composer.fun.bytecode is not None
     assert processor.previous is not None
     composer.fun.bytecode = chunk.write_chunk(composer.fun.bytecode, byte, processor.previous.line)
 
@@ -242,10 +244,13 @@ def emit_return(processor, composer):
 def make_constant(processor, composer, searcher, val):
     # type: (Parser, Compiler, scanner.Scanner, value.Value) -> Tuple[Parser, Compiler, Optional[value.Value]]
     """Add value to constant table."""
+    assert composer.fun is not None
+    assert composer.fun.bytecode is not None
     composer.fun.bytecode, constant = chunk.add_constant(composer.fun.bytecode, val)
 
     if constant > UINT8_MAX:
-        return error(processor, searcher, "Too many constants in one chunk."), None
+        processor = error(processor, searcher, "Too many constants in one chunk.")
+        return processor, composer, None
 
     return processor, composer, constant
 
@@ -267,6 +272,7 @@ def end_compiler(processor, composer):
     processor, composer = emit_return(processor, composer)
     fun = composer.fun
 
+    assert fun is not None
     return processor, fun
 
 
@@ -731,11 +737,10 @@ def compile(source, debug_level):
 
     processor, fun = end_compiler(processor, composer)
 
-    # if processor.debug_level >= 1:
-    #     debug.disassemble_chunk(bytecode, "script")
+    if processor.debug_level >= 1:
+        debug.disassemble_chunk(fun.bytecode, "script")
 
     if processor.had_error:
-        assert fun is not None
         function.free_function(fun, function.FunctionType.TYPE_SCRIPT)
         return None
 
