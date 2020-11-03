@@ -368,7 +368,7 @@ def block(processor, composer, searcher):
 
 
 def define_function(processor, composer, searcher, function_type):
-    #
+    # type: (Parser, Compiler, scanner.Scanner, function.FunctionType) -> Tuple[Parser, Compiler]
     """
     """
     composer = init_compiler(composer)
@@ -401,18 +401,18 @@ def define_function(processor, composer, searcher, function_type):
 
     # Create the function object
     processor, composer, fun = end_compiler(processor, composer)
-    processor, constant = make_constant(processor, composer, searcher, fun)
+    processor, composer, constant = make_constant(processor, composer, searcher, fun)
 
     return emit_bytes(processor, composer, chunk.OpCode.OP_CONSTANT, constant)
 
 
 @expose
 def function_declaration(processor, composer, searcher):
-    #
+    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
     """
     """
     processor, composer = parse_variable(processor, composer, searcher, "Expect function name.")
-    processor, composer = mark_initialized(processor, composer)
+    composer = mark_initialized(processor, composer)
 
     processor, composer = define_function(
         processor,
