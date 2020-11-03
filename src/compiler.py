@@ -80,19 +80,20 @@ class Local():
 
 
 class Compiler():
-    def __init__(self):
-        # type: () -> None
+    def __init__(self, composer):
+        # type: (Optional[Compiler]) -> None
         """Stores local variables, count and scope depth."""
+        self.enclosing = composer
         self.fun = None  # type: Optional[function.Function]
         self.locals = None  # type: Optional[List[Local]]
         self.local_count = 0
         self.scope_depth = 0
 
 
-def init_compiler():
-    # type: () -> Compiler
+def init_compiler(composer=None):
+    # type: (Optional[Compiler]) -> Compiler
     """Initialize new compiler."""
-    composer = Compiler()
+    composer = Compiler(composer)
     composer.fun = function.init_function(function.FunctionType.TYPE_SCRIPT)
     composer.locals = [Local(None, 0) for _ in range(UINT8_COUNT)]
 
@@ -267,13 +268,16 @@ def emit_constant(processor, composer, searcher, val):
 
 @expose
 def end_compiler(processor, composer):
-    # type: (Parser, Compiler) -> Tuple[Parser, function.Function]
+    # type: (Parser, Compiler) -> Tuple[Parser, Optional[Compiler], function.Function]
     """Implement end of expression."""
     processor, composer = emit_return(processor, composer)
+
+    assert composer is not None
     fun = composer.fun
+    enclosing = composer.enclosing
 
     assert fun is not None
-    return processor, fun
+    return processor, enclosing, fun
 
 
 @expose
@@ -363,6 +367,65 @@ def block(processor, composer, searcher):
     return processor, composer
 
 
+def define_function(processor, composer, searcher, function_type):
+    #
+    """
+    """
+    composer = init_compiler(composer)
+    composer = begin_scope(processor, composer)
+
+    # Compile the parameter list
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_LEFT_PAREN,
+        "Expect '(' after function name.",
+    )
+
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_RIGHT_PAREN,
+        "Expect ')' after parameters.",
+    )
+
+    # The body
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_LEFT_BRACE,
+        "Expect '{' before function body.",
+    )
+
+    processor, composer = block(processor, composer, searcher)
+
+    # Create the function object
+    processor, composer, fun = end_compiler(processor, composer)
+    processor, constant = make_constant(processor, composer, searcher, fun)
+
+    return emit_bytes(processor, composer, chunk.OpCode.OP_CONSTANT, constant)
+
+
+@expose
+def function_declaration(processor, composer, searcher):
+    #
+    """
+    """
+    processor, composer = parse_variable(processor, composer, searcher, "Expect function name.")
+    processor, composer = mark_initialized(processor, composer)
+
+    processor, composer = define_function(
+        processor,
+        composer,
+        searcher,
+        function.FunctionType.TYPE_FUNCTION,
+    )
+
+    composer = define_variable(processor, composer)
+
+    return processor, composer
+
+
 @expose
 def variable_declaration(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
@@ -443,22 +506,26 @@ def synchronize(processor, searcher):
 def declaration(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
     """Compiles declarations until end of source code reached."""
+    def wrapper(processor, composer, searcher):
+        #
+        if processor.panic_mode:
+            processor = synchronize(processor, searcher)
+        return processor, composer
+
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_FUN)
+
+    if condition:
+        processor, composer = function_declaration(processor, composer, searcher)
+        return wrapper(processor, composer, searcher)
+
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_VAR)
 
     if condition:
-        processor, composer = variable_declaration(
-            processor,
-            composer,
-            searcher,
-        )
+        processor, composer = variable_declaration(processor, composer, searcher)
+        return wrapper(processor, composer, searcher)
 
-    else:
-        processor, composer = statement(processor, composer, searcher)
-
-    if processor.panic_mode:
-        processor = synchronize(processor, searcher)
-
-    return processor, composer
+    processor, composer = statement(processor, composer, searcher)
+    return wrapper(processor, composer, searcher)
 
 
 @expose
@@ -538,12 +605,7 @@ def unary(processor, composer, searcher):
     operator_type = processor.previous.token_type
 
     # Compile the operand
-    processor, composer = parse_precedence(
-        processor,
-        composer,
-        searcher,
-        Precedence.PREC_UNARY,
-    )
+    processor, composer = parse_precedence(processor, composer, searcher, Precedence.PREC_UNARY)
 
     # Emit the operator instruction
     if operator_type == scanner.TokenType.TOKEN_MINUS:
@@ -658,13 +720,7 @@ def declare_variable(processor, composer, searcher):
 def parse_variable(processor, composer, searcher, error_message):
     # type: (Parser, Compiler, scanner.Scanner, str) -> Tuple[Parser, Compiler]
     """Checks next token in local variable declaration is an identifier token."""
-    processor = consume(
-        processor,
-        searcher,
-        scanner.TokenType.TOKEN_IDENTIFIER,
-        error_message,
-    )
-
+    processor = consume(processor, searcher, scanner.TokenType.TOKEN_IDENTIFIER, error_message)
     processor, composer = declare_variable(processor, composer, searcher)
 
     assert composer.scope_depth > 0
@@ -735,7 +791,8 @@ def compile(source, debug_level):
 
         processor, composer = declaration(processor, composer, searcher)
 
-    processor, fun = end_compiler(processor, composer)
+    processor, composer, fun = end_compiler(processor, composer)
+    assert composer is None
 
     if processor.debug_level >= 1:
         debug.disassemble_chunk(fun.bytecode, "script")
