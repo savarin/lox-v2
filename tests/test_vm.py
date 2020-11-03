@@ -1,10 +1,10 @@
 import chunk
+import function
 import vm
 
 
 def test_manual_init():
     # type: () -> None
-    emulator = vm.init_vm()
     bytecode = chunk.init_chunk()
 
     bytecode, constant = chunk.add_constant(bytecode, 1.2)
@@ -27,7 +27,13 @@ def test_manual_init():
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_PRINT, 123)
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN, 123)
 
-    emulator.bytecode = bytecode
+    fun = function.init_function(function.FunctionType.TYPE_SCRIPT)
+    fun.bytecode = bytecode
+
+    emulator = vm.init_vm()
+    emulator.frames[emulator.frame_count].fun = fun
+    emulator.frame_count += 1
+
     result = vm.run(emulator)
     assert result[0] == vm.InterpretResult.INTERPRET_OK
     assert result[1] == chunk.OpCode.OP_RETURN

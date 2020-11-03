@@ -20,19 +20,19 @@ class Function():
         self.name = None
 
 
-def init_function():
+def init_function(function_type):
     # type: () -> Function
     """Initialize new function."""
-    function = Function()
-    function.function_type = FunctionType.TYPE_SCRIPT
-    function.bytecode = chunk.init_chunk()
+    fun = Function()
+    fun.function_type = function_type
+    fun.bytecode = chunk.init_chunk()
 
-    return function
+    return fun
 
 
-def free_function(function):
+def free_function(fun):
     #
     """
     """
-    function.bytecode = chunk.free_chunk(function.bytecode)
+    fun.bytecode = chunk.free_chunk(fun.bytecode)
     return init_function()
