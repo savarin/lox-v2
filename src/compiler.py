@@ -239,22 +239,22 @@ def emit_return(processor, composer):
 
 
 @expose
-def make_constant(processor, searcher, bytecode, val):
-    # type: (Parser, scanner.Scanner, chunk.Chunk, value.Value) -> Tuple[Parser, Optional[value.Value]]
+def make_constant(processor, composer, searcher, val):
+    # type: (Parser, Compiler, scanner.Scanner, value.Value) -> Tuple[Parser, Compiler, Optional[value.Value]]
     """Add value to constant table."""
-    bytecode, constant = chunk.add_constant(bytecode, val)
+    composer.fun.bytecode, constant = chunk.add_constant(composer.fun.bytecode, val)
 
     if constant > UINT8_MAX:
         return error(processor, searcher, "Too many constants in one chunk."), None
 
-    return processor, constant
+    return processor, composer, constant
 
 
 @expose
 def emit_constant(processor, composer, searcher, val):
     # type: (Parser, Compiler, scanner.Scanner, value.Value) -> Tuple[Parser, Compiler]
     """Append constant to bytecode."""
-    processor, constant = make_constant(processor, composer, searcher, val)
+    processor, composer, constant = make_constant(processor, composer, searcher, val)
 
     assert constant is not None
     return emit_bytes(processor, composer, chunk.OpCode.OP_CONSTANT, constant)
@@ -383,7 +383,7 @@ def variable_declaration(processor, composer, searcher):
 def expression_statement(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
     """Evaluates expression statement prior to semicolon."""
-    processor, composer = expression(processor, composer, searcher, composer)
+    processor, composer = expression(processor, composer, searcher)
 
     processor = consume(
         processor,
@@ -444,8 +444,8 @@ def declaration(processor, composer, searcher):
             processor,
             composer,
             searcher,
-            bytecode,
         )
+
     else:
         processor, composer = statement(processor, composer, searcher)
 
@@ -478,7 +478,7 @@ def statement(processor, composer, searcher):
 
 @expose
 def grouping(processor, composer, searcher):
-    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Composer]
+    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
     """Compiles expression between parentheses and consumes parentheses."""
     processor, composer = expression(processor, composer, searcher)
 
@@ -558,9 +558,9 @@ def parse_precedence(processor, composer, searcher, precedence):
 
     if prefix_rule is None:
         processor = error(processor, searcher, "Expect expression")
-        return processor, bytecode
+        return processor, composer
 
-    processor, bytecode = prefix_rule(processor, composer, searcher)
+    processor, composer = prefix_rule(processor, composer, searcher)
 
     assert processor.current is not None
     while precedence.value <= get_rule(processor.current.token_type).precedence.value:
@@ -570,9 +570,9 @@ def parse_precedence(processor, composer, searcher, precedence):
         infix_rule = get_rule(processor.previous.token_type).infix
 
         assert infix_rule is not None
-        processor, compiler = infix_rule(processor, composer, searcher)
+        processor, composer = infix_rule(processor, composer, searcher)
 
-    return processor, compiler
+    return processor, composer
 
 
 def identifiers_equal(a, b):
@@ -729,7 +729,7 @@ def compile(source, debug_level):
 
         processor, composer = declaration(processor, composer, searcher)
 
-    processor, fun = end_compiler(processor, composer, bytecode)
+    processor, fun = end_compiler(processor, composer)
 
     # if processor.debug_level >= 1:
     #     debug.disassemble_chunk(bytecode, "script")
