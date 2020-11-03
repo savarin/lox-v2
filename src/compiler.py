@@ -507,7 +507,7 @@ def number(processor, composer, searcher, bytecode):
 
 @expose
 def named_variable(processor, composer, searcher, bytecode, token):
-    #
+    # type: (Parser, Compiler, scanner.Scanner, chunk.Chunk, scanner.Token) -> Tuple[Parser, chunk.Chunk]
     """ Set local variable."""
     processor, arg = resolve_local(processor, composer, searcher, token)
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_EQUAL)
@@ -731,7 +731,8 @@ def compile(source, debug_level):
     processor, fun = end_compiler(processor, composer, bytecode)
 
     if processor.had_error:
-        function.free_function(fun)
+        assert fun is not None
+        function.free_function(fun, function.FunctionType.TYPE_SCRIPT)
         return None
 
     return fun

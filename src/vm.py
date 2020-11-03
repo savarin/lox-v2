@@ -22,9 +22,8 @@ class InterpretResult(enum.Enum):
 
 class CallFrame():
     def __init__(self, fun, ip, slots):
-        #
-        """
-        """
+        # type: (Optional[function.Function], int, Optional[List[Optional[StackItem]]]) -> None
+        """Stores function and function slots."""
         self.fun = fun
         self.ip = ip
         self.slots = slots
@@ -33,11 +32,9 @@ class CallFrame():
 class VM():
     def __init__(self):
         # type: () -> None
-        """Stores bytecode and current instruction pointer."""
+        """Stores call frames and stack."""
         self.frames = None  # type: Optional[List[CallFrame]]
         self.frame_count = 0
-        # self.bytecode = None  # type: Optional[chunk.Chunk]
-        # self.ip = 0
         self.stack = None  # type: Optional[List[Optional[StackItem]]]
         self.stack_top = 0
         self.counter = 0
@@ -70,14 +67,13 @@ def free_vm(emulator):
     for i in range(emulator.frame_count):
         assert emulator.frames is not None
         frame = emulator.frames[i]
+
+        assert frame.fun is not None
         bytecode = frame.fun.bytecode
 
+        assert bytecode is not None
         if bytecode.code is not None:
             chunk.free_chunk(bytecode)
-
-    # assert emulator.bytecode is not None
-    # if emulator.bytecode.code is not None:
-    #     emulator.bytecode = chunk.free_chunk(emulator.bytecode)
 
     return reset_stack(emulator)
 
@@ -118,17 +114,14 @@ def read_byte(frame):
     # type: (CallFrame) -> Tuple[CallFrame, chunk.Byte]
     """Reads byte at current instruction pointer and advances pointer."""
     frame.ip += 1
+
+    assert frame.fun is not None
+    assert frame.fun.bytecode is not None
+    assert frame.fun.bytecode.code is not None
     instruction = frame.fun.bytecode.code[frame.ip - 1]
+
+    assert instruction is not None
     return frame, instruction
-
-    # emulator.ip += 1
-
-    # assert emulator.bytecode is not None
-    # assert emulator.bytecode.code is not None
-    # instruction = emulator.bytecode.code[emulator.ip - 1]
-
-    # assert instruction is not None
-    # return emulator, instruction
 
 
 def read_constant(frame):
@@ -136,19 +129,16 @@ def read_constant(frame):
     """Reads next byte from bytecode, treats result as index and looks up
     corresponding location in constants table."""
     frame, offset = read_byte(frame)
+
+    assert frame.fun is not None
+    assert frame.fun.bytecode is not None
+    assert frame.fun.bytecode.constants is not None
+    assert frame.fun.bytecode.constants.values is not None
+    assert isinstance(offset, int)
     constant = frame.fun.bytecode.constants.values[offset]
+
+    assert constant is not None
     return frame, constant
-
-    # emulator, offset = read_byte(emulator)
-
-    # assert emulator.bytecode is not None
-    # assert emulator.bytecode.constants is not None
-    # assert emulator.bytecode.constants.values is not None
-    # assert isinstance(offset, int)
-    # constant = emulator.bytecode.constants.values[offset]
-
-    # assert constant is not None
-    # return emulator, constant
 
 
 def binary_op(emulator, op):
@@ -173,37 +163,24 @@ def run(emulator):
             frame, constant = read_constant(frame)
             emulator = push(emulator, constant)
 
-            # emulator, constant = read_constant(emulator)
-            # emulator = push(emulator, constant)
-
         elif instruction == chunk.OpCode.OP_POP:
             emulator, _ = pop(emulator)
 
         elif instruction == chunk.OpCode.OP_GET_LOCAL:
             frame, slot = read_byte(frame)
+            assert frame.slots is not None
+            assert isinstance(slot, int)
             val = frame.slots[slot]
             if val is None:
                 break
             emulator = push(emulator, val)
 
-            # emulator, slot = read_byte(emulator)
-            # assert isinstance(slot, int)
-            # assert emulator.stack is not None
-            # val = emulator.stack[slot]
-            # if val is None:
-            #     break
-            # emulator = push(emulator, val)
-
         elif instruction == chunk.OpCode.OP_SET_LOCAL:
             frame, slot = read_byte(frame)
             emulator, val = peek(emulator, 0)
+            assert frame.slots is not None
+            assert isinstance(slot, int)
             frame.slots[slot] = val
-
-            # emulator, slot = read_byte(emulator)
-            # emulator, val = peek(emulator, 0)
-            # assert isinstance(slot, int)
-            # assert emulator.stack is not None
-            # emulator.stack[slot] = val
 
         elif instruction == chunk.OpCode.OP_ADD:
             emulator = binary_op(emulator, "+")
@@ -225,6 +202,7 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_PRINT:
             emulator, val = pop(emulator)
+            print(val)
             assert not isinstance(val, function.Function)
             assert emulator.output is not None
             emulator.output.append(val)

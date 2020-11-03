@@ -5,8 +5,6 @@ import chunk
 
 
 class FunctionType(enum.Enum):
-    """
-    """
     TYPE_FUNCTION = "TYPE_FUNCTION"
     TYPE_SCRIPT = "TYPE_SCRIPT"
 
@@ -31,9 +29,10 @@ def init_function(function_type):
     return fun
 
 
-def free_function(fun):
-    #
-    """
-    """
+def free_function(fun, function_type):
+    # type: (Function, FunctionType) -> Function
+    """Reset function by freeing bytecode and reinitialize."""
+    assert fun.bytecode is not None
     fun.bytecode = chunk.free_chunk(fun.bytecode)
-    return init_function()
+
+    return init_function(function_type)
