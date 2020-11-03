@@ -96,6 +96,11 @@ def init_compiler():
     composer.function = function.init_function()
     composer.locals = [Local(None, 0) for _ in range(UINT8_COUNT)]
 
+    # token = scanner.Token(None, 0, 0, None, 0)
+    # local = Local(token, 0)
+    # composer.locals[composer.local_count] = local
+    # composer.local_count += 1
+
     return composer
 
 
@@ -254,10 +259,13 @@ def emit_constant(processor, searcher, bytecode, val):
 
 
 @expose
-def end_compiler(processor, bytecode):
+def end_compiler(processor, composer, bytecode):
     # type: (Parser, chunk.Chunk) -> Tuple[Parser, chunk.Chunk]
     """Implement end of expression."""
-    return emit_return(processor, bytecode)
+    processor, bytecode = emit_return(processor, bytecode)
+    function = composer.function
+
+    return processor, bytecode, function
 
 
 @expose
@@ -712,7 +720,7 @@ def compile(source, bytecode, debug_level):
 
         processor, _, bytecode = declaration(processor, composer, searcher, bytecode)
 
-    processor, bytecode = end_compiler(processor, bytecode)
+    processor, bytecode, _ = end_compiler(processor, composer, bytecode)
 
     if debug_level >= 1:
         debug.disassemble_chunk(bytecode, "script")
