@@ -90,12 +90,16 @@ class Compiler():
         self.scope_depth = 0
 
 
-def init_compiler(composer=None):
-    # type: (Optional[Compiler]) -> Compiler
+def init_compiler(processor, function_type, composer=None):
+    # type: (Parser, function.FunctionType, Optional[Compiler]) -> Compiler
     """Initialize new compiler."""
     composer = Compiler(composer)
-    composer.fun = function.init_function(function.FunctionType.TYPE_SCRIPT)
+    composer.fun = function.init_function(function_type)
     composer.locals = [Local(None, 0) for _ in range(UINT8_COUNT)]
+
+    if function_type == function.FunctionType.TYPE_FUNCTION:
+        assert processor.previous is not None
+        composer.fun.name = processor.previous.source
 
     token = scanner.Token(scanner.TokenType.TOKEN_NIL, 0, 0, None, 0)
     local = Local(token, 0)
@@ -367,11 +371,10 @@ def block(processor, composer, searcher):
     return processor, composer
 
 
-def define_function(processor, composer, searcher, function_type):
+def parse_function(processor, composer, searcher, function_type):
     # type: (Parser, Compiler, scanner.Scanner, function.FunctionType) -> Tuple[Parser, Compiler]
-    """
-    """
-    composer = init_compiler(composer)
+    """Compiles the parameter list and block body of the funtion."""
+    composer = init_compiler(processor, function_type, composer)
     composer = begin_scope(processor, composer)
 
     # Compile the parameter list
@@ -381,6 +384,32 @@ def define_function(processor, composer, searcher, function_type):
         scanner.TokenType.TOKEN_LEFT_PAREN,
         "Expect '(' after function name.",
     )
+
+    if not check(processor, scanner.TokenType.TOKEN_RIGHT_PAREN):
+        while True:
+            assert composer.fun is not None
+            composer.fun.arity += 1
+
+            if composer.fun.arity > 255:
+                processor = error_at_current(
+                    processor,
+                    searcher,
+                    "Can't have more than 255 parameters.",
+                )
+
+            processor, composer = parse_variable(
+                processor,
+                composer,
+                searcher,
+                "Expect parameter name.",
+            )
+
+            composer = define_variable(processor, composer)
+
+            processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_COMMA)
+
+            if not condition:
+                break
 
     processor = consume(
         processor,
@@ -409,12 +438,11 @@ def define_function(processor, composer, searcher, function_type):
 @expose
 def function_declaration(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
-    """
-    """
+    """Declare function when corresponding token matched."""
     processor, composer = parse_variable(processor, composer, searcher, "Expect function name.")
     composer = mark_initialized(processor, composer)
 
-    processor, composer = define_function(
+    processor, composer = parse_function(
         processor,
         composer,
         searcher,
@@ -776,7 +804,7 @@ def compile(source, debug_level):
     """Compiles source code into tokens."""
     searcher = scanner.init_scanner(source)
     processor = init_parser(debug_level)
-    composer = init_compiler()
+    composer = init_compiler(processor, function.FunctionType.TYPE_SCRIPT)
 
     if debug_level >= 2:
         print("\n== tokens ==")
@@ -798,7 +826,7 @@ def compile(source, debug_level):
         debug.disassemble_chunk(fun.bytecode, "script")
 
     if processor.had_error:
-        function.free_function(fun, function.FunctionType.TYPE_SCRIPT)
+        function.free_function(fun, fun.function_type)
         return None
 
     return fun

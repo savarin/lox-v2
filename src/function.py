@@ -16,7 +16,7 @@ class Function():
         self.function_type = None  # type: Optional[FunctionType]
         self.arity = 0
         self.bytecode = None  # type: Optional[chunk.Chunk]
-        self.name = None
+        self.name = None  # type: Optional[str]
 
 
 def init_function(function_type):
