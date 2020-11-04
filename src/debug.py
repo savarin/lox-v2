@@ -65,6 +65,8 @@ def disassemble_instruction(bytecode, offset):
 
     if instruction == chunk.OpCode.OP_CONSTANT:
         return constant_instruction("OP_CONSTANT", offset, bytecode)
+    elif instruction == chunk.OpCode.OP_NIL:
+        return simple_instruction("OP_NIL", offset)
     elif instruction == chunk.OpCode.OP_POP:
         return simple_instruction("OP_POP", offset)
     elif instruction == chunk.OpCode.OP_GET_LOCAL:
@@ -83,6 +85,8 @@ def disassemble_instruction(bytecode, offset):
         return simple_instruction("OP_NEGATE", offset)
     elif instruction == chunk.OpCode.OP_PRINT:
         return simple_instruction("OP_PRINT", offset)
+    elif instruction == chunk.OpCode.OP_CALL:
+        return byte_instruction("OP_CALL", offset, bytecode)
     elif instruction == chunk.OpCode.OP_RETURN:
         return simple_instruction("OP_RETURN", offset)
 

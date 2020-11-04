@@ -1,9 +1,14 @@
+import enum
 from typing import List, Optional, Union
 
 import memory
 
 Value = Union[int, float]
 Values = Optional[List[Optional[Value]]]
+
+
+class ValueType(enum.Enum):
+    VAL_NIL = "VAL_NIL"
 
 
 class ValueArray():

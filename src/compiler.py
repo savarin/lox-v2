@@ -28,7 +28,7 @@ def expose(f):
 
 # yapf: disable
 rule_map = {
-    "TOKEN_LEFT_PAREN":    ["grouping", None,     "PREC_NONE"],
+    "TOKEN_LEFT_PAREN":    ["grouping", "call",   "PREC_CALL"],
     "TOKEN_RIGHT_PAREN":   [None,       None,     "PREC_NONE"],
     "TOKEN_LEFT_BRACE":    [None,       None,     "PREC_NONE"],
     "TOKEN_RIGHT_BRACE":   [None,       None,     "PREC_NONE"],
@@ -242,6 +242,7 @@ def emit_bytes(processor, composer, byte1, byte2):
 def emit_return(processor, composer):
     # type: (Parser, Compiler) -> Tuple[Parser, Compiler]
     """Clean up after complete compilation stage."""
+    processor, composer = emit_byte(processor, composer, chunk.OpCode.OP_NIL)
     return emit_byte(processor, composer, chunk.OpCode.OP_RETURN)
 
 
@@ -342,6 +343,15 @@ def binary(processor, composer, searcher):
 
 
 @expose
+def call(processor, composer, searcher):
+    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
+    """
+    """
+    processor, composer, arg_count = argument_list(processor, composer, searcher)
+    return emit_bytes(processor, composer, chunk.OpCode.OP_CALL, arg_count)
+
+
+@expose
 def expression(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
     """Compiles expression."""
@@ -405,7 +415,6 @@ def parse_function(processor, composer, searcher, function_type):
             )
 
             composer = define_variable(processor, composer)
-
             processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_COMMA)
 
             if not condition:
@@ -509,6 +518,32 @@ def print_statement(processor, composer, searcher):
 
 
 @expose
+def return_statement(processor, composer, searcher):
+    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
+    """
+    """
+    assert composer.fun is not None
+    if composer.fun.function_type == function.FunctionType.TYPE_SCRIPT:
+        processor = error(processor, searcher, "Can't return from top-level code.")
+
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_SEMICOLON)
+
+    if condition:
+        return emit_return(processor, composer)
+
+    processor, composer = expression(processor, composer, searcher)
+
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_SEMICOLON,
+        "Expect ';' after return value.",
+    )
+
+    return emit_byte(processor, composer, chunk.OpCode.OP_RETURN)
+
+
+@expose
 def synchronize(processor, searcher):
     # type: (Parser, scanner.Scanner) -> Parser
     """Skip tokens until statement boundary reached. This allows multiple errors
@@ -564,6 +599,12 @@ def statement(processor, composer, searcher):
 
     if condition:
         processor, composer = print_statement(processor, composer, searcher)
+        return processor, composer
+
+    processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_RETURN)
+
+    if condition:
+        processor, composer = return_statement(processor, composer, searcher)
         return processor, composer
 
     processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_LEFT_BRACE)
@@ -776,6 +817,37 @@ def define_variable(processor, composer):
     return mark_initialized(processor, composer)
 
 
+@expose
+def argument_list(processor, composer, searcher):
+    #
+    """
+    """
+    arg_count = 0
+
+    if not check(processor, scanner.TokenType.TOKEN_RIGHT_PAREN):
+        while True:
+            processor, composer = expression(processor, composer, searcher)
+
+            if arg_count == 255:
+                processor = error(processor, searcher, "Can't have more than 255 arguments.")
+                return processor, composer, arg_count
+
+            arg_count += 1
+            processor, condition = match(processor, searcher, scanner.TokenType.TOKEN_COMMA)
+
+            if condition:
+                break
+
+    processor = consume(
+        processor,
+        searcher,
+        scanner.TokenType.TOKEN_RIGHT_PAREN,
+        "Expect ')' after arguments.",
+    )
+
+    return processor, composer, arg_count
+
+
 def get_rule(token_type):
     # type: (scanner.TokenType) -> ParseRule
     """Custom function to convert TokenType to ParseRule. This allows the
@@ -783,6 +855,7 @@ def get_rule(token_type):
     classes in the conversion process."""
     type_map = {
         "binary": binary,
+        "call": call,
         "grouping": grouping,
         "number": number,
         "unary": unary,
@@ -820,6 +893,9 @@ def compile(source, debug_level):
         processor, composer = declaration(processor, composer, searcher)
 
     processor, composer, fun = end_compiler(processor, composer)
+
+    # Final composer returned is the composer.enclosing of first composer initialized, check
+    # composer is indeed None.
     assert composer is None
 
     if processor.debug_level >= 1:

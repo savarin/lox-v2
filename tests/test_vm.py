@@ -1,6 +1,11 @@
 import chunk
 import function
 import vm
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import scanner
+    import value
 
 
 def test_manual_init():
@@ -32,8 +37,15 @@ def test_manual_init():
 
     emulator = vm.init_vm()
     assert emulator.frames is not None
-    emulator.frames[emulator.frame_count].fun = fun
+
+    frame = emulator.frames[emulator.frame_count]
     emulator.frame_count += 1
+
+    frame.fun = fun
+    frame.ip = 0
+    frame.slots_top = 1
+    assert emulator.stack is not None
+    frame.slots = list(emulator.stack)
 
     result = vm.run(emulator)
     assert result[0] == vm.InterpretResult.INTERPRET_OK
@@ -44,7 +56,7 @@ def test_manual_init():
 
 
 def interpret(source, result, opcode, output):
-    #
+    # type: (scanner.Source, vm.InterpretResult, chunk.OpCode, List[value.Value]) -> None
     emulator = vm.init_vm()
     result_tuple = vm.interpret(emulator, source, 0)
 

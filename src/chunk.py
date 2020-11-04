@@ -12,6 +12,7 @@ class OpCode(enum.Enum):
     """Each instruction has a 1-byte operation code, which controls what kind of
     instruction we're dealing with."""
     OP_CONSTANT = "OP_CONSTANT"
+    OP_NIL = "OP_NIL"
     OP_POP = "OP_POP"
     OP_GET_LOCAL = "OP_GET_LOCAL"
     OP_SET_LOCAL = "OP_SET_LOCAL"
@@ -21,6 +22,7 @@ class OpCode(enum.Enum):
     OP_DIVIDE = "OP_DIVIDE"
     OP_NEGATE = "OP_NEGATE"
     OP_PRINT = "OP_PRINT"
+    OP_CALL = "OP_CALL"
     OP_RETURN = "OP_RETURN"
 
 

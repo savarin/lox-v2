@@ -53,6 +53,7 @@ single_token_map = {
     "{": TokenType.TOKEN_LEFT_BRACE,
     "}": TokenType.TOKEN_RIGHT_BRACE,
     ";": TokenType.TOKEN_SEMICOLON,
+    ",": TokenType.TOKEN_COMMA,
     "-": TokenType.TOKEN_MINUS,
     "+": TokenType.TOKEN_PLUS,
     "/": TokenType.TOKEN_SLASH,
