@@ -228,3 +228,21 @@ def test_multiple_variable_scope_error():
         opcode=chunk.OpCode.OP_GET_LOCAL,
         output=[1],
     )
+
+
+def test_basic_function():
+    # type: () -> None
+    interpret(
+        source="""\
+        {
+            fun a() {
+                return 1;
+            }
+
+            print a();
+        }
+        """,
+        result=vm.InterpretResult.INTERPRET_OK,
+        opcode=chunk.OpCode.OP_RETURN,
+        output=[1],
+    )
