@@ -343,8 +343,7 @@ def binary(processor, composer, searcher):
 @expose
 def call(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
-    """
-    """
+    """Compile arguments list and emit call instruction."""
     processor, composer, arg_count = argument_list(processor, composer, searcher)
     return emit_bytes(processor, composer, chunk.OpCode.OP_CALL, arg_count)
 
@@ -516,8 +515,7 @@ def print_statement(processor, composer, searcher):
 @expose
 def return_statement(processor, composer, searcher):
     # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler]
-    """
-    """
+    """Allows function to return non-nil value."""
     assert composer.fun is not None
     if composer.fun.function_type == function.FunctionType.TYPE_SCRIPT:
         processor = error(processor, searcher, "Can't return from top-level code.")
@@ -815,9 +813,8 @@ def define_variable(processor, composer):
 
 @expose
 def argument_list(processor, composer, searcher):
-    #
-    """
-    """
+    # type: (Parser, Compiler, scanner.Scanner) -> Tuple[Parser, Compiler, int]
+    """Compile the argument list of a function."""
     arg_count = 0
 
     if not check(processor, scanner.TokenType.TOKEN_RIGHT_PAREN):

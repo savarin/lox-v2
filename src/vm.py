@@ -112,8 +112,7 @@ def peek(frame, distance):
 
 def call(emulator, fun, arg_count):
     # type: (VM, function.Function, int) -> Tuple[VM, bool]
-    """
-    """
+    """Initialize a new call frame for given function."""
     # Number of arguments not as expected
     if arg_count != fun.arity:
         return emulator, False
@@ -138,8 +137,7 @@ def call(emulator, fun, arg_count):
 
 def call_value(emulator, fun, arg_count):
     # type: (VM, function.Function, int) -> Tuple[VM, bool]
-    """
-    """
+    """Checks function has function_type attribute."""
     if getattr(fun, "function_type", None) is not None:
         return call(emulator, fun, arg_count)
 
