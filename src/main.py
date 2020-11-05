@@ -54,7 +54,7 @@ def main():
         print("Usage: python src/main.py [path]")
         exit_code(64)
 
-    emulator = vm.free_vm(emulator)
+    vm.free_vm(emulator)
 
 
 if __name__ == "__main__":

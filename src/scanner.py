@@ -11,6 +11,7 @@ class TokenType(enum.Enum):
     TOKEN_RIGHT_PAREN = "TOKEN_RIGHT_PAREN"
     TOKEN_LEFT_BRACE = "TOKEN_LEFT_BRACE"
     TOKEN_RIGHT_BRACE = "TOKEN_RIGHT_BRACE"
+    TOKEN_COMMA = "TOKEN_COMMA"
     TOKEN_MINUS = "TOKEN_MINUS"
     TOKEN_PLUS = "TOKEN_PLUS"
     TOKEN_SEMICOLON = "TOKEN_SEMICOLON"
@@ -27,6 +28,7 @@ class TokenType(enum.Enum):
 
     # Keywords
     TOKEN_FUN = "TOKEN_FUN"
+    TOKEN_NIL = "TOKEN_NIL"
     TOKEN_PRINT = "TOKEN_PRINT"
     TOKEN_RETURN = "TOKEN_RETURN"
     TOKEN_VAR = "TOKEN_VAR"
@@ -51,6 +53,7 @@ single_token_map = {
     "{": TokenType.TOKEN_LEFT_BRACE,
     "}": TokenType.TOKEN_RIGHT_BRACE,
     ";": TokenType.TOKEN_SEMICOLON,
+    ",": TokenType.TOKEN_COMMA,
     "-": TokenType.TOKEN_MINUS,
     "+": TokenType.TOKEN_PLUS,
     "/": TokenType.TOKEN_SLASH,
