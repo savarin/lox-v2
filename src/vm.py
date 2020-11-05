@@ -38,7 +38,6 @@ class VM():
         self.frame_count = 0
         self.stack = None  # type: Optional[List[Optional[StackItem]]]
         self.stack_top = 0
-        self.counter = 0
         self.output = None  # type: Optional[List[value.Value]]
 
 
@@ -88,30 +87,17 @@ def push(frame, val):
 
     return frame
 
-    # assert emulator.stack is not None
-    # emulator.stack[emulator.stack_top] = val
-    # emulator.stack_top += 1
-
-    # return emulator
-
 
 def pop(frame):
     # type: (CallFrame) -> Tuple[CallFrame, StackItem]
     """Pop most recently pushed value."""
     frame.slots_top -= 1
+
     assert frame.slots is not None
     val = frame.slots[frame.slots_top]
 
     assert val is not None
     return frame, val
-
-    # emulator.stack_top -= 1
-
-    # assert emulator.stack is not None
-    # val = emulator.stack[emulator.stack_top]
-
-    # assert val is not None
-    # return emulator, val
 
 
 def peek(frame, distance):
@@ -122,12 +108,6 @@ def peek(frame, distance):
 
     assert val is not None
     return frame, val
-
-    # assert emulator.stack is not None
-    # val = emulator.stack[emulator.stack_top - 1 - distance]
-
-    # assert val is not None
-    # return emulator, val
 
 
 def call(emulator, fun, arg_count):
@@ -262,6 +242,7 @@ def run(emulator):
 
         elif instruction == chunk.OpCode.OP_PRINT:
             frame, val = pop(frame)
+            print(val)
             assert not isinstance(val, function.Function)
             assert not isinstance(val, value.ValueType)
             assert emulator.output is not None
@@ -275,7 +256,7 @@ def run(emulator):
             emulator, condition = call_value(emulator, fun, arg_count)
             if not condition:
                 break
-            assert emulator.frames is False
+            assert emulator.frames is not None
             frame = emulator.frames[emulator.frame_count - 1]
 
         elif instruction == chunk.OpCode.OP_RETURN:
@@ -285,12 +266,9 @@ def run(emulator):
                 frame, result = pop(frame)
                 assert isinstance(instruction, chunk.OpCode)
                 return InterpretResult.INTERPRET_OK, instruction, emulator.output
-            frame = push(frame, result)
             assert emulator.frames is not None
             frame = emulator.frames[emulator.frame_count - 1]
-
-            assert isinstance(instruction, chunk.OpCode)
-            return InterpretResult.INTERPRET_OK, instruction, emulator.output
+            frame = push(frame, result)
 
     assert isinstance(instruction, chunk.OpCode)
     return InterpretResult.INTERPRET_RUNTIME_ERROR, instruction, emulator.output

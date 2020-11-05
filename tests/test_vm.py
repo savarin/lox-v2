@@ -30,6 +30,7 @@ def test_manual_init():
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_NEGATE, 123)
 
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_PRINT, 123)
+    bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_NIL, 123)
     bytecode = chunk.write_chunk(bytecode, chunk.OpCode.OP_RETURN, 123)
 
     fun = function.init_function(function.FunctionType.TYPE_SCRIPT)
@@ -37,7 +38,6 @@ def test_manual_init():
 
     emulator = vm.init_vm()
     assert emulator.frames is not None
-
     frame = emulator.frames[emulator.frame_count]
     emulator.frame_count += 1
 
@@ -46,6 +46,7 @@ def test_manual_init():
     frame.slots_top = 1
     assert emulator.stack is not None
     frame.slots = list(emulator.stack)
+    frame.slots[0] = fun
 
     result = vm.run(emulator)
     assert result[0] == vm.InterpretResult.INTERPRET_OK

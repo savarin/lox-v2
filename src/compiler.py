@@ -195,9 +195,7 @@ def consume(processor, searcher, token_type, message):
     if processor.current.token_type == token_type:
         return advance(processor, searcher)
 
-    processor = error_at_current(processor, searcher, message)
-
-    return processor
+    return error_at_current(processor, searcher, message)
 
 
 @expose
@@ -459,7 +457,6 @@ def function_declaration(processor, composer, searcher):
     )
 
     composer = define_variable(processor, composer)
-
     return processor, composer
 
 
@@ -481,7 +478,6 @@ def variable_declaration(processor, composer, searcher):
     )
 
     composer = define_variable(processor, composer)
-
     return processor, composer
 
 
